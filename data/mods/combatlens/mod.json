@@ -1,0 +1,10 @@
+{
+	"id": "combatlens",
+	"name": "CombatLens",
+	"author": "ServerGunnik",
+	"emoji": "⚔️",
+	"description": "Client-side overlay PvP: serca nad nickami, karta przeciwnika z pancerzem i durability, CPS, combo, ping, statystyki walki. Read-only — nie automatyzuje niczego, dozwolony na serwerach.",
+	"loader": "Fabric",
+	"latestVersion": "0.1.17",
+	"repo": "https://github.com/servergunnik/CombatLens"
+}

@@ -1,0 +1,10 @@
+{
+	"id": "commandlooper",
+	"name": "CommandLooper",
+	"author": "ServerGunnik",
+	"emoji": "🔁",
+	"description": "Klientowy mod: wysyła komendy z listy w pętli, aż go zatrzymasz. GUI (K) do edycji listy, powtórzeń, opóźnienia i liczby pętli. Start/Stop pod klawiszem (J). Auto-stop przy rozłączeniu. Konfiguracja zapisywana w JSON.",
+	"loader": "Fabric",
+	"latestVersion": "1.0.0",
+	"repo": null
+}

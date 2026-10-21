@@ -1,0 +1,29 @@
+# Zaleznosci
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sekrety i konfiguracja lokalna
+.env
+.env.local
+.env.*.local
+
+# Baza danych
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+*.sqlite
+*.sqlite3
+
+# System / edytor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logi
+logs/
+*.log

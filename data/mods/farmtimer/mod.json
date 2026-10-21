@@ -1,0 +1,10 @@
+{
+	"id": "farmtimer",
+	"name": "FarmTimer",
+	"author": "ServerGunnik",
+	"emoji": "⏰",
+	"description": "Klientowy mod: obserwuje spawner / uprawe / sadzonke pod celownikiem (klawisz P) i pokazuje kiedy sie odpalą — ETA do spawnu, dojrzenia crop-a, drzewa z sadzonki. Uczy sie realnego czasu z Twoich chunkow i pokazuje na HUD. Wylacznie informacyjny.",
+	"loader": "Fabric",
+	"latestVersion": "0.2.0",
+	"repo": null
+}

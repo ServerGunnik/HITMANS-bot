@@ -1,0 +1,41 @@
+{
+  "name": "hitmans-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Discord bot do zarządzania klanem: rekrutacja, hierarchia ról, moderacja i statystyki (discord.js v14, Components V2)",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "deploy:clear": "node src/deploy-commands.js --clear",
+    "test": "node --test \"tests/**/*.test.js\""
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^18.0.0"
+  },
+  "keywords": [
+    "discord",
+    "discord.js",
+    "bot",
+    "clan",
+    "components-v2",
+    "moderation",
+    "recruitment"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ServerGunnik/NL_Bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ServerGunnik/NL_Bot/issues"
+  },
+  "homepage": "https://github.com/ServerGunnik/NL_Bot#readme"
+}

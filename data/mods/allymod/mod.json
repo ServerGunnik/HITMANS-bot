@@ -1,0 +1,10 @@
+{
+	"id": "allymod",
+	"name": "MyAllay's",
+	"author": "ServerGunnik",
+	"emoji": "🎯",
+	"description": "Klientowy mod: oznaczaj graczy jako sojusznikow (zielony) lub wrogow (czerwony) — kolorowy wireframe modelu + kolor nazwy nad glowa z prefixem [A]/[E]. Widoczne w calym zasiegu nametagow. Komendy /ally /enemy + GUI (F6). Wylacznie informacyjny, dozwolony na serwerach.",
+	"loader": "Fabric",
+	"latestVersion": "0.1.0",
+	"repo": null
+}
