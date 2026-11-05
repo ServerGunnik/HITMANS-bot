@@ -81,6 +81,7 @@ async function tick(client) {
 
   await require('./ops').tick(client).catch((error) => logger.warn('Scheduler ops:', error.message));
   await require('./events').tick(client).catch((error) => logger.warn('Scheduler wydarzen:', error.message)); // wydarzenia (przypomnienia 30/5 min) + /przypomnij
+  await require('./birthdays').tick(client).catch((error) => logger.warn('Scheduler urodzin:', error.message));
 }
 
 function start(client) {

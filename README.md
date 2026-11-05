@@ -179,6 +179,8 @@ OWNER_IDS=                # opcjonalnie: ID osób z pełnym dostępem, po przeci
    - ✅ **Message Content Intent** (automoderacja, licznik aktywności, nagrody za czat)
    - ⬜ *Presence Intent* — tylko jeśli chcesz licznik „online” w `/stats`
      (wtedy ustaw też `ENABLE_PRESENCE_INTENT=true`)
+   - Bot używa też nieuprzywilejowanego intentu **Guild Message Reactions** (starboard ⭐)
+     oraz partials `Reaction` i `User` — nie trzeba ich włączać w portalu.
 4. Zaproś bota (podmień `CLIENT_ID`):
 
 ```
@@ -594,3 +596,44 @@ Jeśli aktualizacja dodaje nowe komendy, po restarcie uruchom jeszcze `npm run d
 - `/propozycje kanal #kanal` *(admin)* — kanał, na który trafiają propozycje.
 - `/propozycja tresc` — karta z przyciskami 👍/👎 (jeden głos na osobę, można zmienić lub wycofać, liczniki na żywo) i wątkiem do dyskusji.
 - `/propozycje status id status:przyjeta|odrzucona|w-realizacji [powod]` *(admin)* — aktualizuje kartę (po przyjęciu/odrzuceniu głosowanie się zamyka) i wysyła autorowi DM.
+
+## Społeczność: urodziny, starboard, tickety pomocy
+
+### Urodziny
+
+| Komenda | Opis |
+|---|---|
+| `/urodziny ustaw dzien miesiac [rok]` | Zapisuje datę urodzin (rok opcjonalny — wtedy w życzeniach pojawi się wiek) |
+| `/urodziny usun` | Usuwa zapisaną datę |
+| `/urodziny lista` | Urodziny w ciągu najbliższych 30 dni (także przez przełom roku) |
+| `/urodziny kanal kanal [rola]` *(admin)* | Kanał życzeń i opcjonalna rola nadawana solenizantom na jeden dzień |
+
+Życzenia wysyłane są raz dziennie ok. **9:00 czasu polskiego** (Europe/Warsaw). Data ostatniej wysyłki
+jest zapisywana w bazie, więc restart bota nie wyśle ich drugi raz. Osoby urodzone 29 lutego świętują
+28 lutego w latach nieprzestępnych. Rola urodzinowa jest zdejmowana następnego dnia.
+
+### Starboard
+
+| Komenda | Opis |
+|---|---|
+| `/starboard kanal kanal` *(admin)* | Ustawia kanał starboardu i włącza funkcję |
+| `/starboard prog liczba` *(admin)* | Ile reakcji ⭐ potrzeba (domyślnie 3) |
+| `/starboard wylacz` *(admin)* | Wyłącza starboard (karty zostają na kanale) |
+
+Wiadomość, która zbierze wymaganą liczbę ⭐ (bez gwiazdki autora i botów), trafia na starboard jako karta
+z treścią, obrazkiem, autorem, licznikiem i linkiem. Licznik aktualizuje się na bieżąco; gdy gwiazdek
+będzie mniej niż próg (albo oryginał zostanie usunięty), karta znika. Działa także dla starszych wiadomości
+(partials `Reaction`/`User`, intent *Guild Message Reactions*).
+
+### Tickety pomocy
+
+| Komenda | Opis |
+|---|---|
+| `/ticket-panel ustaw kategoria rola-obslugi [kanal-logow]` *(admin)* | Kategoria kanałów, rola obsługi i kanał transkrypcji |
+| `/ticket-panel opublikuj [kanal] [tytul] [opis]` *(admin)* | Publikuje panel z przyciskami **Pomoc**, **Skarga**, **Inne** |
+
+Kliknięcie kategorii otwiera formularz z krótkim opisem, a bot tworzy prywatny kanał dla zgłaszającego
+i obsługi. Każdy może mieć **jeden otwarty ticket w danej kategorii**. W tickecie: **Przejmij** (obsługa)
+i **Zamknij** (z opcjonalnym powodem). Po zamknięciu bot generuje transkrypcję `.txt` (czas, autor, treść,
+linki do załączników), wysyła ją na kanał logów i w DM do zgłaszającego, a po 10 s usuwa kanał.
+Tickety pomocy są niezależne od ticketów podboju (`/podboj-panel`).
