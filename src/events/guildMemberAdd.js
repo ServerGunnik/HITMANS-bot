@@ -3,6 +3,7 @@
 const { Events } = require('discord.js');
 
 const guilds = require('../database/repositories/guilds');
+const recruitment = require('../database/repositories/recruitment');
 const serverLogs = require('../services/serverLogs');
 const security = require('../services/security');
 const logger = require('../utils/logger');
@@ -36,6 +37,19 @@ module.exports = {
     if (member.user.bot) return;
 
     const settings = guilds.get(member.guild.id);
+
+    // Ktos, kto juz zdal rekrutacje i wrocil na serwer, od razu dostaje role czlonka.
+    const latest = recruitment.getLatestApplication(member.guild.id, member.id);
+    const memberRole = settings.member_role_id ? member.guild.roles.cache.get(settings.member_role_id) : null;
+    if (latest?.status === 'accepted' && memberRole?.editable) {
+      try {
+        await member.roles.add(memberRole, `Powrot czlonka (zgloszenie #${latest.id} zaakceptowane)`);
+        return;
+      } catch (error) {
+        logger.warn(`Nie udalo sie przywrocic roli czlonka uzytkownikowi ${member.id}:`, error.message);
+      }
+    }
+
     if (!settings.guest_role_id) return;
 
     const role = member.guild.roles.cache.get(settings.guest_role_id);
