@@ -76,6 +76,17 @@ const SECTIONS = [
       '`/propozycje kanal | status` — kanal i decyzje w sprawie propozycji *(admin)*',
     ],
   },
+  {
+    name: '📅 Wydarzenia i wojny',
+    lines: [
+      '`/event utworz | lista | edytuj | anuluj` — wydarzenia z zapisami *(oficer)*',
+      '`/event obecnosc` — obecnosc po wydarzeniu *(oficer)*',
+      '`/wojna statystyki | ranking` — bilans wojen i najlepsi gracze',
+      '`/wojna wynik | usun` — zapis wyniku bitwy *(oficer)*',
+      '`/przypomnij za:2h tresc:...` — przypomnienie w DM',
+      '`/przypomnienia lista | usun` — Twoje przypomnienia',
+    ],
+  },
 ];
 
 module.exports = {

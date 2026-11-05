@@ -111,6 +111,21 @@ Konfiguracja jest w pełni **per-serwer** i trzymana w bazie SQLite, więc jedna
 - `/profil` — status w klanie, ranga, data dołączenia, aktywność, saldo, ostrzeżenia, zgłoszenie rekrutacyjne, role.
 - `/pomoc` — lista wszystkich komend.
 
+### 7. Wydarzenia, wojny i przypomnienia
+
+- **Wydarzenia / wojny klanowe** — `/event utworz` publikuje kartę z przyciskami **Będę / Może / Nie będę**,
+  licznikami i listą zapisanych (odświeżaną na żywo). Opcjonalnie oznacza rolę przy publikacji.
+- **Automatyczne przypomnienia** 30 i 5 minut przed startem — ping osób „Będę” i „Może” na kanale wydarzenia,
+  opcjonalnie także w DM (`dm:True`). Po starcie zapisy są zamykane.
+- **Obecność** — po wydarzeniu oficer oznacza obecnych/nieobecnych (`/event obecnosc`), dane trafiają do bazy.
+- **Terminy w czasie polskim (Europe/Warsaw)**: `2026-11-20 20:00`, `20.11 20:00`, `jutro 20:00`, `20:00`
+  (dziś, a jeśli minęła — jutro), `za 2h`, `za 30m`.
+- **Wyniki wojen** — `/wojna wynik` zapisuje bitwę (przeciwnik, wynik, punkty, uczestnicy lub obecni z wydarzenia),
+  `/wojna statystyki` pokazuje bilans W/P/R i procent wygranych, `/wojna ranking` — najaktywniejszych graczy.
+  Bilans bitew gracza widać też w `/profil`.
+- **Przypomnienia** — `/przypomnij za:2h tresc:...` lub `kiedy:jutro 18:00`; dostarczane w DM (gdy DM są
+  zablokowane — na kanale, gdzie je ustawiono). Zapisane w bazie, więc przetrwają restart bota.
+
 ---
 
 ## Wymagania
@@ -299,6 +314,22 @@ a komendy ekonomiczne odpowiadają komunikatem o wyłączonej funkcji.
 | `/profil [użytkownik]` | Profil członka klanu |
 | `/pomoc` | Lista komend |
 | `/konfiguracja pokaz \| kanal \| rola \| powitanie \| rekrutacja \| reset` | Ustawienia serwera *(Zarządzanie serwerem)* |
+
+### Wydarzenia, wojny i przypomnienia
+
+| Komenda | Opis | Uprawnienia |
+|---|---|---|
+| `/event utworz <tytul> <start> [opis] [kanal] [rola] [dm]` | Wydarzenie z zapisami i przypomnieniami | Zarządzanie wydarzeniami |
+| `/event lista` | Nadchodzące i ostatnio rozpoczęte wydarzenia | Zarządzanie wydarzeniami |
+| `/event edytuj <id> [tytul] [start] [opis] [rola] [dm]` | Zmiana wydarzenia (nowy termin resetuje przypomnienia) | Zarządzanie wydarzeniami |
+| `/event anuluj <id>` | Odwołanie wydarzenia | Zarządzanie wydarzeniami |
+| `/event obecnosc <id> [obecni] [nieobecni] [zapisani]` | Oznaczenie / podgląd obecności | Zarządzanie wydarzeniami |
+| `/wojna wynik <przeciwnik> <rezultat> [wynik_punktowy] [uczestnicy] [wydarzenie] [kiedy]` | Zapis bitwy | oficer (Zarządzanie wydarzeniami) |
+| `/wojna usun <id>` | Usunięcie błędnie zapisanej bitwy | oficer (Zarządzanie wydarzeniami) |
+| `/wojna statystyki [przeciwnik]` | Bilans W/P/R, % wygranych, ostatnie bitwy | wszyscy |
+| `/wojna ranking [typ]` | Ranking graczy: udział lub wygrane | wszyscy |
+| `/przypomnij <tresc> [za] [kiedy]` | Przypomnienie w DM (fallback: kanał) | wszyscy |
+| `/przypomnienia lista \| usun` | Własne przypomnienia | wszyscy |
 
 ---
 
