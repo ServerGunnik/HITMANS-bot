@@ -16,6 +16,8 @@ const { timestamp, truncate } = require('../utils/format');
 module.exports = {
   name: Events.GuildMemberRemove,
   async execute(member) {
+    require('../services/clanActivity').onMemberEvent(member, 'leave');
+
     const roles = member.roles?.cache
       ?.filter((role) => role.id !== member.guild.id)
       .map(String)

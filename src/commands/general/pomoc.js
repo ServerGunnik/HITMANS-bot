@@ -57,6 +57,18 @@ const SECTIONS = [
       '`/pomoc` — ta lista',
     ],
   },
+  {
+    name: '🏖️ Aktywnosc klanu',
+    lines: [
+      '`/urlop zglos <do> <powod>` — zglos nieobecnosc (np. `2026-11-20`, `20.11`, `za 7d`)',
+      '`/urlop koniec` — zakoncz urlop wczesniej',
+      '`/urlop lista` — trwajace urlopy *(oficer)*',
+      '`/urlop ustawienia` — rola urlopowa i kanal kadry *(admin)*',
+      '`/nieaktywni [dni]` — czlonkowie bez aktywnosci *(oficer)*',
+      '`/raport teraz | kanal` — raport tygodniowy klanu *(oficer / admin)*',
+      '`/notatka dodaj | lista | usun` — notatki o czlonkach *(oficer)*',
+    ],
+  },
 ];
 
 module.exports = {

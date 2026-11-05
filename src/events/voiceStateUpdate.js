@@ -15,6 +15,8 @@ module.exports = {
     const member = newState.member ?? oldState.member;
     if (!guild || !member || member.user.bot) return;
 
+    require('../services/clanActivity').onVoiceState(oldState, newState);
+
     voiceService
       .handleVoiceUpdate(oldState, newState)
       .catch((error) => logger.warn('Temp voice:', error.message));

@@ -78,6 +78,8 @@ async function tick(client) {
   await processExpiredMutes(client).catch((error) => logger.warn('Scheduler mutow:', error.message));
 
   verification.cleanup();
+
+  await require('./clanActivity').tick(client).catch((error) => logger.warn('Scheduler aktywnosci klanu:', error.message));
 }
 
 function start(client) {

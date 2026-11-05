@@ -385,3 +385,67 @@ CREATE TABLE IF NOT EXISTS conquest_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_conquest_guild ON conquest_tickets (guild_id, status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_conquest_channel ON conquest_tickets (channel_id);
+
+-- =============================================================================
+--  AKTYWNOSC KLANU: nieaktywni, urlopy, raport tygodniowy, notatki oficerow
+-- =============================================================================
+
+-- Ustawienia funkcji aktywnosci (osobna tabela, zeby nie rozbudowywac guild_settings)
+CREATE TABLE IF NOT EXISTS activity_settings (
+  guild_id           TEXT    PRIMARY KEY,
+  leave_role_id      TEXT,                          -- rola nadawana na czas urlopu
+  officer_channel_id TEXT,                          -- NULL = kanal logow moderacji
+  report_channel_id  TEXT,                          -- NULL = raport tygodniowy wylaczony
+  report_last_week   TEXT,                          -- klucz ostatnio wyslanego raportu (YYYY-MM-DD poniedzialku)
+  inactive_days      INTEGER NOT NULL DEFAULT 14,
+  updated_at         INTEGER NOT NULL
+);
+
+-- Dzienna aktywnosc pojedynczych osob (wiadomosci + czas na kanalach glosowych)
+CREATE TABLE IF NOT EXISTS member_activity_days (
+  guild_id      TEXT    NOT NULL,
+  user_id       TEXT    NOT NULL,
+  day           TEXT    NOT NULL,                   -- YYYY-MM-DD (UTC)
+  messages      INTEGER NOT NULL DEFAULT 0,
+  voice_seconds INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (guild_id, user_id, day)
+);
+CREATE INDEX IF NOT EXISTS idx_activity_days_day ON member_activity_days (guild_id, day);
+
+-- Dolaczenia i wyjscia z serwera (do raportu tygodniowego)
+CREATE TABLE IF NOT EXISTS member_events (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id   TEXT    NOT NULL,
+  user_id    TEXT    NOT NULL,
+  type       TEXT    NOT NULL,                      -- join | leave
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_member_events_guild ON member_events (guild_id, created_at);
+
+-- Urlopy czlonkow
+CREATE TABLE IF NOT EXISTS member_leaves (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id   TEXT    NOT NULL,
+  user_id    TEXT    NOT NULL,
+  reason     TEXT    NOT NULL,
+  starts_at  INTEGER NOT NULL,
+  ends_at    INTEGER NOT NULL,
+  ended_at   INTEGER,                               -- NULL = urlop trwa
+  end_reason TEXT,                                  -- manual | expired | officer
+  ended_by   TEXT,
+  role_id    TEXT,                                  -- rola urlopowa nadana przy zgloszeniu
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_member_leaves_active ON member_leaves (guild_id, ended_at, user_id);
+CREATE INDEX IF NOT EXISTS idx_member_leaves_expiry ON member_leaves (ended_at, ends_at);
+
+-- Notatki oficerow o czlonkach (widoczne tylko dla kadry)
+CREATE TABLE IF NOT EXISTS officer_notes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id   TEXT    NOT NULL,
+  user_id    TEXT    NOT NULL,
+  author_id  TEXT    NOT NULL,
+  content    TEXT    NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_officer_notes_user ON officer_notes (guild_id, user_id, id DESC);

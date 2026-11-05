@@ -22,6 +22,7 @@ module.exports = {
 
     try {
       activity.trackMessage(message.guild.id, message.author.id);
+      require('../services/clanActivity').onMessage(message);
     } catch (error) {
       logger.debug('Nie udalo sie zapisac aktywnosci:', error.message);
     }
