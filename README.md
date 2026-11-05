@@ -637,3 +637,24 @@ i obsługi. Każdy może mieć **jeden otwarty ticket w danej kategorii**. W tic
 i **Zamknij** (z opcjonalnym powodem). Po zamknięciu bot generuje transkrypcję `.txt` (czas, autor, treść,
 linki do załączników), wysyła ją na kanał logów i w DM do zgłaszającego, a po 10 s usuwa kanał.
 Tickety pomocy są niezależne od ticketów podboju (`/podboj-panel`).
+
+## Aktywność klanu: urlopy, nieaktywni, raport tygodniowy, notatki
+
+Bot zapisuje ostatnią aktywność każdej osoby (wiadomość **lub** czas na kanale głosowym, bez kanału AFK)
+oraz dzienną aktywność, dołączenia i wyjścia — na tej podstawie działają poniższe komendy.
+
+| Komenda | Opis |
+|---|---|
+| `/urlop zglos do:<data> powod:<tekst>` | Zgłoszenie nieobecności. Data: `2026-11-20`, `20.11`, `20.11.2026`, `za 7d`, `za 2 tyg` (czas polski) |
+| `/urlop koniec [uzytkownik]` | Wcześniejsze zakończenie urlopu (oficer może zakończyć cudzy) |
+| `/urlop lista` | Trwające urlopy *(oficer)* |
+| `/urlop ustawienia [rola] [kanal] [wyczysc]` | Rola nadawana na czas urlopu i kanał powiadomień kadry (domyślnie kanał logów moderacji) *(admin)* |
+| `/nieaktywni [dni:14]` | Członkowie klanu (rola członka lub dowolna rola z hierarchii) bez aktywności od N dni, posortowani wg ostatniej aktywności; osoby na urlopie osobno *(oficer)* |
+| `/raport teraz [opublikuj]` | Raport z ostatnich 7 dni *(oficer)* |
+| `/raport kanal [kanal] [dni_nieaktywnosci]` | Kanał automatycznego raportu (poniedziałek 10:00, Europe/Warsaw); bez kanału — wyłącza *(admin)* |
+| `/notatka dodaj` / `lista` / `usun` | Notatki oficerów o członkach; liczba i najnowsza notatka widoczne w `/profil` tylko dla kadry *(oficer)* |
+
+**Oficer** = administrator, osoba z uprawnieniem *Moderowanie członków* albo posiadacz najwyższego stopnia hierarchii.
+Urlopy kończą się automatycznie (scheduler zdejmuje rolę urlopową i powiadamia kadrę). Raport tygodniowy zawiera:
+dołączenia/wyjścia, rekrutację, najaktywniejszych (wiadomości i głos), liczbę akcji moderacyjnych, ekonomię (gdy włączona)
+i liczbę nieaktywnych. Wysłany tydzień jest zapisywany w bazie, więc restart bota nie powoduje podwójnego raportu.

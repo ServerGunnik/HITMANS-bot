@@ -17,6 +17,8 @@ const { timestamp } = require('../utils/format');
 module.exports = {
   name: Events.GuildMemberAdd,
   async execute(member) {
+    require('../services/clanActivity').onMemberEvent(member, 'join');
+
     await serverLogs.send(member.guild, 'members', {
       title: member.user.bot ? 'Bot dodany na serwer' : 'Nowy czlonek',
       color: COLORS.success,
