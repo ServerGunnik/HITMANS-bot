@@ -10,6 +10,7 @@ const recruitment = require('../../database/repositories/recruitment');
 const roles = require('../../database/repositories/roles');
 const economyService = require('../../services/economy');
 const recruitmentService = require('../../services/recruitment');
+const warsService = require('../../services/wars');
 const { COLORS, panel, reply } = require('../../ui/components');
 const { plural, timestamp, truncate } = require('../../utils/format');
 
@@ -79,6 +80,7 @@ function buildProfile(member, { viewer } = {}) {
         inline: true,
       },
       ...economyField,
+      { name: 'Wojny klanowe', value: warsService.profileSummary(guild.id, member.id) },
       { name: 'Zgloszenie rekrutacyjne', value: applicationValue },
       { name: 'Ostatnie sprawy moderacyjne', value: casesValue },
       { name: `Role (${memberRoles.length})`, value: truncate(memberRoles.join(' ') || 'brak', 900) },

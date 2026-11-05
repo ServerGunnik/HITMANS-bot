@@ -385,3 +385,88 @@ CREATE TABLE IF NOT EXISTS conquest_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_conquest_guild ON conquest_tickets (guild_id, status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_conquest_channel ON conquest_tickets (channel_id);
+
+-- =============================================================================
+--  WYDARZENIA / WOJNY KLANOWE (zapisy Bede/Moze/Nie bede, przypomnienia, obecnosc)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS events (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id      TEXT    NOT NULL,
+  channel_id    TEXT    NOT NULL,
+  message_id    TEXT,
+  author_id     TEXT    NOT NULL,
+  title         TEXT    NOT NULL,
+  description   TEXT,
+  starts_at     INTEGER NOT NULL,
+  ping_role_id  TEXT,
+  dm_reminders  INTEGER NOT NULL DEFAULT 0,
+  status        TEXT    NOT NULL DEFAULT 'scheduled',  -- scheduled | started | cancelled
+  reminded_30   INTEGER NOT NULL DEFAULT 0,
+  reminded_5    INTEGER NOT NULL DEFAULT 0,
+  created_at    INTEGER NOT NULL,
+  updated_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_events_guild ON events (guild_id, status, starts_at);
+CREATE INDEX IF NOT EXISTS idx_events_due ON events (status, starts_at);
+
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  event_id    INTEGER NOT NULL,
+  user_id     TEXT    NOT NULL,
+  status      TEXT    NOT NULL,                       -- yes | maybe | no
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (event_id, user_id),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS event_attendance (
+  event_id    INTEGER NOT NULL,
+  user_id     TEXT    NOT NULL,
+  present     INTEGER NOT NULL,                       -- 1 = obecny, 0 = nieobecny
+  marked_by   TEXT    NOT NULL,
+  marked_at   INTEGER NOT NULL,
+  PRIMARY KEY (event_id, user_id),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_event_attendance_user ON event_attendance (user_id);
+
+-- =============================================================================
+--  WYNIKI WOJEN / PODBOJOW
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS wars (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id     TEXT    NOT NULL,
+  opponent     TEXT    NOT NULL,
+  result       TEXT    NOT NULL,                      -- win | loss | draw
+  score        TEXT,
+  event_id     INTEGER,                               -- opcjonalne powiazanie z events.id
+  recorded_by  TEXT    NOT NULL,
+  fought_at    INTEGER NOT NULL,
+  created_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wars_guild ON wars (guild_id, fought_at DESC);
+
+CREATE TABLE IF NOT EXISTS war_participants (
+  war_id   INTEGER NOT NULL,
+  user_id  TEXT    NOT NULL,
+  PRIMARY KEY (war_id, user_id),
+  FOREIGN KEY (war_id) REFERENCES wars(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_war_participants_user ON war_participants (user_id);
+
+-- =============================================================================
+--  PRZYPOMNIENIA (/przypomnij — dostarczane przez scheduler, przetrwaja restart)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS reminders (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id    TEXT    NOT NULL,
+  channel_id  TEXT    NOT NULL,                       -- kanal awaryjny, gdy DM sa zablokowane
+  user_id     TEXT    NOT NULL,
+  content     TEXT    NOT NULL,
+  remind_at   INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reminders_due ON reminders (remind_at);
+CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders (guild_id, user_id, remind_at);

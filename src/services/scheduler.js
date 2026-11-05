@@ -78,6 +78,8 @@ async function tick(client) {
   await processExpiredMutes(client).catch((error) => logger.warn('Scheduler mutow:', error.message));
 
   verification.cleanup();
+
+  await require('./events').tick(client); // wydarzenia (przypomnienia 30/5 min) + /przypomnij
 }
 
 function start(client) {
