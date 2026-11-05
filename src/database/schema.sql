@@ -385,3 +385,100 @@ CREATE TABLE IF NOT EXISTS conquest_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_conquest_guild ON conquest_tickets (guild_id, status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_conquest_channel ON conquest_tickets (channel_id);
+
+-- =============================================================================
+--  POZIOMY I XP (wiadomosci + kanaly glosowe, nagrody w postaci rol)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS member_levels (
+  guild_id           TEXT    NOT NULL,
+  user_id            TEXT    NOT NULL,
+  xp                 INTEGER NOT NULL DEFAULT 0,     -- calkowite XP
+  level              INTEGER NOT NULL DEFAULT 0,     -- poziom wyliczony z XP (do wykrywania awansu)
+  messages           INTEGER NOT NULL DEFAULT 0,     -- wiadomosci, ktore daly XP
+  voice_minutes      INTEGER NOT NULL DEFAULT 0,
+  last_message_xp_at INTEGER,                        -- cooldown XP za wiadomosci
+  updated_at         INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_member_levels_rank ON member_levels (guild_id, xp DESC);
+
+CREATE TABLE IF NOT EXISTS level_settings (
+  guild_id            TEXT    PRIMARY KEY,
+  enabled             INTEGER NOT NULL DEFAULT 1,
+  announce_mode       TEXT    NOT NULL DEFAULT 'same',  -- same | channel | off
+  announce_channel_id TEXT,
+  multiplier          REAL    NOT NULL DEFAULT 1,
+  keep_previous       INTEGER NOT NULL DEFAULT 1,       -- 1 = nagrody sie kumuluja, 0 = tylko najwyzsza
+  updated_at          INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS level_rewards (
+  guild_id   TEXT    NOT NULL,
+  level      INTEGER NOT NULL,
+  role_id    TEXT    NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, level)
+);
+
+-- =============================================================================
+--  ROLE DO WYBORU (panele z przyciskami)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS role_panels (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id    TEXT    NOT NULL,
+  title       TEXT    NOT NULL,
+  description TEXT,
+  mode        TEXT    NOT NULL DEFAULT 'multi',   -- multi | single
+  channel_id  TEXT,
+  message_id  TEXT,
+  created_by  TEXT    NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_role_panels_guild ON role_panels (guild_id, id);
+
+CREATE TABLE IF NOT EXISTS role_panel_entries (
+  panel_id   INTEGER NOT NULL,
+  role_id    TEXT    NOT NULL,
+  label      TEXT    NOT NULL,
+  emoji      TEXT,
+  position   INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (panel_id, role_id),
+  FOREIGN KEY (panel_id) REFERENCES role_panels(id) ON DELETE CASCADE
+);
+
+-- =============================================================================
+--  PROPOZYCJE (karty z glosowaniem 👍/👎 i statusem)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS suggestion_settings (
+  guild_id   TEXT    PRIMARY KEY,
+  channel_id TEXT,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS suggestions (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id      TEXT    NOT NULL,
+  channel_id    TEXT    NOT NULL,
+  message_id    TEXT,
+  thread_id     TEXT,
+  author_id     TEXT    NOT NULL,
+  content       TEXT    NOT NULL,
+  status        TEXT    NOT NULL DEFAULT 'pending',  -- pending | accepted | rejected | in_progress
+  status_reason TEXT,
+  status_by     TEXT,
+  status_at     INTEGER,
+  created_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_suggestions_guild ON suggestions (guild_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS suggestion_votes (
+  suggestion_id INTEGER NOT NULL,
+  user_id       TEXT    NOT NULL,
+  vote          INTEGER NOT NULL,                    -- 1 = za, -1 = przeciw
+  created_at    INTEGER NOT NULL,
+  PRIMARY KEY (suggestion_id, user_id),
+  FOREIGN KEY (suggestion_id) REFERENCES suggestions(id) ON DELETE CASCADE
+);
