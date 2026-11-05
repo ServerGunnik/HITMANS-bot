@@ -78,6 +78,8 @@ async function tick(client) {
   await processExpiredMutes(client).catch((error) => logger.warn('Scheduler mutow:', error.message));
 
   verification.cleanup();
+
+  await require('./ops').tick(client).catch((error) => logger.warn('Scheduler ops:', error.message));
 }
 
 function start(client) {

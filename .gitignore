@@ -27,3 +27,6 @@ Thumbs.db
 # Logi
 logs/
 *.log
+
+# Kopie zapasowe bazy (/backup)
+backups/

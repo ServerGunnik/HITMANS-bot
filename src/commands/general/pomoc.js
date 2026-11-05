@@ -57,6 +57,14 @@ const SECTIONS = [
       '`/pomoc` — ta lista',
     ],
   },
+  {
+    name: '🖥️ Utrzymanie bota',
+    lines: [
+      '`/backup teraz | lista` — kopie zapasowe bazy *(admin)*',
+      '`/aktualizuj sprawdz | teraz` — aktualizacja bota z gita i restart PM2 *(admin / wlasciciel)*',
+      '`/status` — wersja, czas dzialania, pamiec i baza bota *(admin)*',
+    ],
+  },
 ];
 
 module.exports = {

@@ -25,6 +25,12 @@ const config = {
     .split(',')
     .map((id) => id.trim())
     .filter(Boolean),
+  // kopie zapasowe bazy
+  backupDir: path.resolve(process.cwd(), process.env.BACKUP_DIR || './backups'),
+  backupRetentionDays: Number.parseInt(process.env.BACKUP_RETENTION_DAYS ?? '14', 10) || 14,
+  // automatyczna aktualizacja (git pull + restart przez PM2)
+  autoUpdate: /^(1|true|yes|tak)$/i.test(process.env.AUTO_UPDATE ?? ''),
+  autoUpdateIntervalMinutes: Number.parseInt(process.env.AUTO_UPDATE_INTERVAL_MINUTES ?? '10', 10) || 10,
 };
 
 /** Rzuca czytelnym bledem, gdy brakuje wymaganych zmiennych srodowiskowych. */

@@ -485,3 +485,62 @@ Po dodaniu uruchom `npm run deploy`.
 ## Licencja
 
 MIT
+
+---
+
+## Kopie zapasowe, aktualizacje i status bota
+
+### Funkcje
+
+- **Kopie zapasowe bazy** — raz na dobę bot robi spójną kopię SQLite (`db.backup()`) do katalogu
+  `BACKUP_DIR` i usuwa kopie starsze niż `BACKUP_RETENTION_DAYS`. `/backup teraz` tworzy kopię od razu;
+  właściciel bota (`OWNER_IDS`) dostaje plik jako ukryty załącznik, jeśli ma do 8 MB (kopia zawiera dane
+  wszystkich serwerów bota, więc inni administratorzy widzą tylko potwierdzenie).
+- **Aktualizacja z gita** — `/aktualizuj sprawdz` pokazuje, o ile commitów bot jest za `origin/main`,
+  a `/aktualizuj teraz` (tylko `OWNER_IDS`) robi `git pull --ff-only`, w razie zmiany `package-lock.json`
+  także `npm ci --omit=dev`, i kończy proces — PM2 uruchamia bota ponownie. Aktualizacja jest przerywana,
+  gdy w katalogu są niezatwierdzone zmiany albo nie da się zrobić fast-forward.
+  Opcjonalnie `AUTO_UPDATE=true` robi to samo automatycznie co `AUTO_UPDATE_INTERVAL_MINUTES`
+  i zostawia notkę na kanale logów moderacji.
+- **`/status`** — wersja (commit), czas działania, ping WebSocket, pamięć, wersja Node.js, rozmiar bazy,
+  ostatnia kopia, liczba serwerów i informacja o zaległych aktualizacjach (z ostatniego sprawdzenia).
+
+### Komendy
+
+| Komenda | Opis |
+|---|---|
+| `/backup teraz \| lista` | Kopia bazy teraz / lista kopii *(Administrator; plik tylko dla `OWNER_IDS`)* |
+| `/aktualizuj sprawdz` | Sprawdza nowe commity na `origin/main` *(Administrator)* |
+| `/aktualizuj teraz` | Aktualizuje i restartuje bota *(tylko `OWNER_IDS`)* |
+| `/status` | Stan techniczny bota *(Administrator)* |
+
+### Zmienne środowiskowe
+
+| Zmienna | Domyślnie | Opis |
+|---|---|---|
+| `OWNER_IDS` | — | ID właścicieli bota (po przecinku) — `/aktualizuj teraz` i pobieranie kopii bazy |
+| `BACKUP_DIR` | `./backups` | Katalog kopii zapasowych bazy (jest w `.gitignore`) |
+| `BACKUP_RETENTION_DAYS` | `14` | Po ilu dniach kopie są usuwane |
+| `AUTO_UPDATE` | `false` | Automatyczna aktualizacja z `origin/main` + restart |
+| `AUTO_UPDATE_INTERVAL_MINUTES` | `10` | Co ile minut sprawdzać aktualizacje w trybie automatycznym |
+
+### Uruchomienie pod PM2
+
+Aktualizacja z poziomu Discorda zakłada, że bot działa pod [PM2](https://pm2.keymetrics.io/)
+z katalogu sklonowanego repozytorium (`git clone`), z gałęzią `main` śledzącą `origin/main`.
+
+```bash
+npm install -g pm2
+git clone https://github.com/ServerGunnik/NL_Bot.git && cd NL_Bot
+npm ci --omit=dev
+cp .env.example .env        # uzupełnij token, CLIENT_ID, OWNER_IDS ...
+npm run deploy              # rejestracja komend
+pm2 start ecosystem.config.js
+pm2 save                    # zapamiętaj listę procesów
+pm2 startup                 # autostart PM2 po restarcie serwera (wykonaj wypisane polecenie)
+```
+
+Przydatne polecenia: `pm2 logs hitmans-bot`, `pm2 restart hitmans-bot`, `pm2 status`.
+Plik `ecosystem.config.js` uruchamia `src/index.js` jako proces `hitmans-bot` z `autorestart: true` —
+po `/aktualizuj teraz` bot kończy się kodem 0, a PM2 od razu startuje go z nowym kodem.
+Jeśli aktualizacja dodaje nowe komendy, po restarcie uruchom jeszcze `npm run deploy`.
