@@ -451,6 +451,26 @@ async function acceptApplication({ guild, application, reviewer }) {
   }
 
   const member = await guild.members.fetch(application.user_id).catch(() => null);
+
+  // Role nadajemy PRZED zapisaniem decyzji: jesli sie nie uda, zgloszenie
+  // zostaje oczekujace i mozna sprobowac ponownie, zamiast utknac jako
+  // "zaakceptowane" bez zmienionej roli.
+  if (member) {
+    if (!memberRole.editable) {
+      return {
+        ok: false,
+        reason:
+          `Nie moge nadac roli ${memberRole} — jest wyzej niz moja najwyzsza rola albo nie mam uprawnienia ` +
+          '*Zarzadzanie rolami*. Przesun role bota ponad role czlonka i sprobuj ponownie.',
+      };
+    }
+    try {
+      await member.roles.add(memberRole, `Zaakceptowane zgloszenie #${application.id} przez ${reviewer.tag}`);
+    } catch (error) {
+      return { ok: false, reason: `Nie udalo sie nadac roli ${memberRole}: ${error.message}. Zgloszenie nadal czeka.` };
+    }
+  }
+
   const updated = recruitment.decideApplication(application.id, {
     status: 'accepted',
     reviewerId: reviewer.id,
@@ -458,11 +478,6 @@ async function acceptApplication({ guild, application, reviewer }) {
   });
 
   if (member) {
-    try {
-      await member.roles.add(memberRole, `Zaakceptowane zgloszenie #${application.id} przez ${reviewer.tag}`);
-    } catch (error) {
-      warnings.push(`Nie udalo sie nadac roli ${memberRole}: ${error.message}`);
-    }
 
     if (settings.guest_role_id && member.roles.cache.has(settings.guest_role_id)) {
       try {

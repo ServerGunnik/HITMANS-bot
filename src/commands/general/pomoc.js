@@ -57,6 +57,57 @@ const SECTIONS = [
       '`/pomoc` — ta lista',
     ],
   },
+  {
+    name: '🖥️ Utrzymanie bota',
+    lines: [
+      '`/backup teraz | lista` — kopie zapasowe bazy *(admin)*',
+      '`/aktualizuj sprawdz | teraz` — aktualizacja bota z gita i restart PM2 *(admin / wlasciciel)*',
+      '`/status` — wersja, czas dzialania, pamiec i baza bota *(admin)*',
+    ],
+  },
+  {
+    name: '🌟 Spolecznosc',
+    lines: [
+      '`/poziom [uzytkownik]` — poziom, XP i miejsce w rankingu',
+      '`/poziomy ranking` — ranking poziomow serwera',
+      '`/poziomy ustaw` / `/poziomy nagroda dodaj | usun | lista` — XP i role za poziomy *(admin)*',
+      '`/role-panel utworz | dodaj | usun-role | tryb | opublikuj` — panele rol do wyboru *(admin)*',
+      '`/propozycja <tresc>` — zglos propozycje do glosowania',
+      '`/propozycje kanal | status` — kanal i decyzje w sprawie propozycji *(admin)*',
+    ],
+  },
+  {
+    name: '📅 Wydarzenia i wojny',
+    lines: [
+      '`/event utworz | lista | edytuj | anuluj` — wydarzenia z zapisami *(oficer)*',
+      '`/event obecnosc` — obecnosc po wydarzeniu *(oficer)*',
+      '`/wojna statystyki | ranking` — bilans wojen i najlepsi gracze',
+      '`/wojna wynik | usun` — zapis wyniku bitwy *(oficer)*',
+      '`/przypomnij za:2h tresc:...` — przypomnienie w DM',
+      '`/przypomnienia lista | usun` — Twoje przypomnienia',
+    ],
+  },
+  {
+    name: '🎉 Urodziny, starboard i tickety',
+    lines: [
+      '`/urodziny ustaw | usun | lista` — Twoje urodziny i nadchodzace swieta',
+      '`/urodziny kanal` — kanal zyczen i rola na dzien urodzin *(admin)*',
+      '`/starboard kanal | prog | wylacz` — wiadomosci z ⭐ na osobnym kanale *(admin)*',
+      '`/ticket-panel ustaw | opublikuj` — tickety pomocy (Pomoc, Skarga, Inne) *(admin)*',
+    ],
+  },
+  {
+    name: '🏖️ Aktywnosc klanu',
+    lines: [
+      '`/urlop zglos <do> <powod>` — zglos nieobecnosc (np. `2026-11-20`, `20.11`, `za 7d`)',
+      '`/urlop koniec` — zakoncz urlop wczesniej',
+      '`/urlop lista` — trwajace urlopy *(oficer)*',
+      '`/urlop ustawienia` — rola urlopowa i kanal kadry *(admin)*',
+      '`/nieaktywni [dni]` — czlonkowie bez aktywnosci *(oficer)*',
+      '`/raport teraz | kanal` — raport tygodniowy klanu *(oficer / admin)*',
+      '`/notatka dodaj | lista | usun` — notatki o czlonkach *(oficer)*',
+    ],
+  },
 ];
 
 module.exports = {

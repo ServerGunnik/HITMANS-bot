@@ -86,4 +86,75 @@ function memberCanAssignRole(member, role) {
   return { ok: true };
 }
 
-module.exports = { isOwner, isAdmin, canModerate, canManageRole, memberCanAssignRole };
+/**
+ * Oficer klanu: administrator, osoba z uprawnieniem Moderowanie czlonkami
+ * lub Zarzadzanie wydarzeniami, albo posiadacz najwyzszego stopnia hierarchii
+ * (gdy hierarchia ma co najmniej 2 stopnie). Jedna definicja dla wszystkich funkcji.
+ */
+function isOfficer(member) {
+  if (!member) return false;
+  if (isAdmin(member)) return true;
+  if (
+    member.permissions?.has?.(PermissionFlagsBits.ModerateMembers) ||
+    member.permissions?.has?.(PermissionFlagsBits.ManageEvents)
+  ) {
+    return true;
+  }
+
+  // Leniwie — utils nie powinny ladowac bazy przy samym imporcie.
+  const hierarchy = require('../database/repositories/roles').list(member.guild.id);
+  if (hierarchy.length < 2) return false;
+  const top = hierarchy.reduce((best, entry) => (entry.level > best.level ? entry : best), hierarchy[0]);
+  return member.roles?.cache?.has(top.role_id) ?? false;
+}
+
+/** Uprawnienia, ktorych nie wolno nadawac samoobslugowo (panele rol, rola urlopowa). */
+const DANGEROUS_PERMISSIONS = [
+  ['Administrator', PermissionFlagsBits.Administrator],
+  ['Zarzadzanie serwerem', PermissionFlagsBits.ManageGuild],
+  ['Zarzadzanie rolami', PermissionFlagsBits.ManageRoles],
+  ['Banowanie', PermissionFlagsBits.BanMembers],
+  ['Wyrzucanie', PermissionFlagsBits.KickMembers],
+  ['Zarzadzanie kanalami', PermissionFlagsBits.ManageChannels],
+  ['Wzmianka @everyone', PermissionFlagsBits.MentionEveryone],
+];
+
+/** Nazwy niebezpiecznych uprawnien, ktore ma rola. */
+function dangerousPermissionsOf(role) {
+  const permissions = role.permissions;
+  if (!permissions?.has) return [];
+  return DANGEROUS_PERMISSIONS.filter(([, flag]) => permissions.has(flag, false)).map(([name]) => name);
+}
+
+/**
+ * Czy role mozna bezpiecznie rozdawac samoobslugowo: bot musi nia zarzadzac,
+ * nie moze byc zarzadzana przez integracje ani dawac niebezpiecznych uprawnien.
+ */
+function checkSelfAssignableRole(guild, role) {
+  if (!role) return { ok: false, reason: 'Ta rola juz nie istnieje.' };
+  if (role.managed) {
+    return { ok: false, reason: `Rola ${role} jest zarzadzana przez integracje i nie moze byc rozdawana.` };
+  }
+
+  const dangerous = dangerousPermissionsOf(role);
+  if (dangerous.length > 0) {
+    return {
+      ok: false,
+      reason: `Rola ${role} ma niebezpieczne uprawnienia (${dangerous.join(', ')}) — nie moze byc rozdawana automatycznie.`,
+    };
+  }
+
+  return canManageRole(guild, role);
+}
+
+module.exports = {
+  isOwner,
+  isAdmin,
+  isOfficer,
+  canModerate,
+  canManageRole,
+  memberCanAssignRole,
+  DANGEROUS_PERMISSIONS,
+  dangerousPermissionsOf,
+  checkSelfAssignableRole,
+};

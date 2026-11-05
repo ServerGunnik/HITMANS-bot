@@ -9,12 +9,16 @@ const moderation = require('../../database/repositories/moderation');
 const recruitment = require('../../database/repositories/recruitment');
 const roles = require('../../database/repositories/roles');
 const economyService = require('../../services/economy');
+const levelsService = require('../../services/levels');
 const recruitmentService = require('../../services/recruitment');
+const warsService = require('../../services/wars');
 const { COLORS, panel, reply } = require('../../ui/components');
 const { plural, timestamp, truncate } = require('../../utils/format');
+const officerNotesService = require('../../services/officerNotes');
+const { isOfficer } = require('../../services/inactivity');
 
 /** Buduje kontener z profilem czlonka klanu — uzywany takze przez panel zgloszen. */
-function buildProfile(member, { viewer } = {}) {
+function buildProfile(member, { viewer, officerNotes = false } = {}) {
   const { guild } = member;
   const settings = guilds.get(guild.id);
 
@@ -79,9 +83,13 @@ function buildProfile(member, { viewer } = {}) {
         inline: true,
       },
       ...economyField,
+      levelsService.profileField(guild.id, member.id),
+      { name: 'Wojny klanowe', value: warsService.profileSummary(guild.id, member.id) },
       { name: 'Zgloszenie rekrutacyjne', value: applicationValue },
       { name: 'Ostatnie sprawy moderacyjne', value: casesValue },
       { name: `Role (${memberRoles.length})`, value: truncate(memberRoles.join(' ') || 'brak', 900) },
+      // notatki oficerow — tylko w odpowiedziach widocznych wylacznie dla kadry
+      ...(officerNotes ? [{ name: '🗒️ Notatki oficerow', value: officerNotesService.summary(guild.id, member.id) }] : []),
     ],
     footer: `ID: ${member.id}${viewer ? ` • na zadanie ${viewer.tag}` : ''}`,
   });
@@ -106,7 +114,15 @@ module.exports = {
       return reply.error(interaction, 'Ten uzytkownik nie jest czlonkiem tego serwera.');
     }
 
-    return reply.panel(interaction, buildProfile(member), { ephemeral: target.id !== interaction.user.id });
+    const ephemeral = target.id !== interaction.user.id;
+    // Notatki oficerow: w ephemeral profilu jako pole, przy publicznym — osobna ukryta wiadomosc.
+    const officer = isOfficer(interaction.member);
+    const result = await reply.panel(interaction, buildProfile(member, { officerNotes: officer && ephemeral }), { ephemeral });
+    if (officer && !ephemeral) {
+      const notesPanel = officerNotesService.buildSummaryPanel(interaction.guild.id, member.id);
+      if (notesPanel) await reply.panel(interaction, notesPanel, { ephemeral: true });
+    }
+    return result;
   },
 
   buildProfile,

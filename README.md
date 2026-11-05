@@ -111,6 +111,21 @@ Konfiguracja jest w pełni **per-serwer** i trzymana w bazie SQLite, więc jedna
 - `/profil` — status w klanie, ranga, data dołączenia, aktywność, saldo, ostrzeżenia, zgłoszenie rekrutacyjne, role.
 - `/pomoc` — lista wszystkich komend.
 
+### 7. Wydarzenia, wojny i przypomnienia
+
+- **Wydarzenia / wojny klanowe** — `/event utworz` publikuje kartę z przyciskami **Będę / Może / Nie będę**,
+  licznikami i listą zapisanych (odświeżaną na żywo). Opcjonalnie oznacza rolę przy publikacji.
+- **Automatyczne przypomnienia** 30 i 5 minut przed startem — ping osób „Będę” i „Może” na kanale wydarzenia,
+  opcjonalnie także w DM (`dm:True`). Po starcie zapisy są zamykane.
+- **Obecność** — po wydarzeniu oficer oznacza obecnych/nieobecnych (`/event obecnosc`), dane trafiają do bazy.
+- **Terminy w czasie polskim (Europe/Warsaw)**: `2026-11-20 20:00`, `20.11 20:00`, `jutro 20:00`, `20:00`
+  (dziś, a jeśli minęła — jutro), `za 2h`, `za 30m`.
+- **Wyniki wojen** — `/wojna wynik` zapisuje bitwę (przeciwnik, wynik, punkty, uczestnicy lub obecni z wydarzenia),
+  `/wojna statystyki` pokazuje bilans W/P/R i procent wygranych, `/wojna ranking` — najaktywniejszych graczy.
+  Bilans bitew gracza widać też w `/profil`.
+- **Przypomnienia** — `/przypomnij za:2h tresc:...` lub `kiedy:jutro 18:00`; dostarczane w DM (gdy DM są
+  zablokowane — na kanale, gdzie je ustawiono). Zapisane w bazie, więc przetrwają restart bota.
+
 ---
 
 ## Wymagania
@@ -164,6 +179,8 @@ OWNER_IDS=                # opcjonalnie: ID osób z pełnym dostępem, po przeci
    - ✅ **Message Content Intent** (automoderacja, licznik aktywności, nagrody za czat)
    - ⬜ *Presence Intent* — tylko jeśli chcesz licznik „online” w `/stats`
      (wtedy ustaw też `ENABLE_PRESENCE_INTENT=true`)
+   - Bot używa też nieuprzywilejowanego intentu **Guild Message Reactions** (starboard ⭐)
+     oraz partials `Reaction` i `User` — nie trzeba ich włączać w portalu.
 4. Zaproś bota (podmień `CLIENT_ID`):
 
 ```
@@ -299,6 +316,22 @@ a komendy ekonomiczne odpowiadają komunikatem o wyłączonej funkcji.
 | `/profil [użytkownik]` | Profil członka klanu |
 | `/pomoc` | Lista komend |
 | `/konfiguracja pokaz \| kanal \| rola \| powitanie \| rekrutacja \| reset` | Ustawienia serwera *(Zarządzanie serwerem)* |
+
+### Wydarzenia, wojny i przypomnienia
+
+| Komenda | Opis | Uprawnienia |
+|---|---|---|
+| `/event utworz <tytul> <start> [opis] [kanal] [rola] [dm]` | Wydarzenie z zapisami i przypomnieniami | Zarządzanie wydarzeniami |
+| `/event lista` | Nadchodzące i ostatnio rozpoczęte wydarzenia | Zarządzanie wydarzeniami |
+| `/event edytuj <id> [tytul] [start] [opis] [rola] [dm]` | Zmiana wydarzenia (nowy termin resetuje przypomnienia) | Zarządzanie wydarzeniami |
+| `/event anuluj <id>` | Odwołanie wydarzenia | Zarządzanie wydarzeniami |
+| `/event obecnosc <id> [obecni] [nieobecni] [zapisani]` | Oznaczenie / podgląd obecności | Zarządzanie wydarzeniami |
+| `/wojna wynik <przeciwnik> <rezultat> [wynik_punktowy] [uczestnicy] [wydarzenie] [kiedy]` | Zapis bitwy | oficer (Zarządzanie wydarzeniami) |
+| `/wojna usun <id>` | Usunięcie błędnie zapisanej bitwy | oficer (Zarządzanie wydarzeniami) |
+| `/wojna statystyki [przeciwnik]` | Bilans W/P/R, % wygranych, ostatnie bitwy | wszyscy |
+| `/wojna ranking [typ]` | Ranking graczy: udział lub wygrane | wszyscy |
+| `/przypomnij <tresc> [za] [kiedy]` | Przypomnienie w DM (fallback: kanał) | wszyscy |
+| `/przypomnienia lista \| usun` | Własne przypomnienia | wszyscy |
 
 ---
 
@@ -485,3 +518,143 @@ Po dodaniu uruchom `npm run deploy`.
 ## Licencja
 
 MIT
+
+---
+
+## Kopie zapasowe, aktualizacje i status bota
+
+### Funkcje
+
+- **Kopie zapasowe bazy** — raz na dobę bot robi spójną kopię SQLite (`db.backup()`) do katalogu
+  `BACKUP_DIR` i usuwa kopie starsze niż `BACKUP_RETENTION_DAYS`. `/backup teraz` tworzy kopię od razu;
+  właściciel bota (`OWNER_IDS`) dostaje plik jako ukryty załącznik, jeśli ma do 8 MB (kopia zawiera dane
+  wszystkich serwerów bota, więc inni administratorzy widzą tylko potwierdzenie).
+- **Aktualizacja z gita** — `/aktualizuj sprawdz` pokazuje, o ile commitów bot jest za `origin/main`,
+  a `/aktualizuj teraz` (tylko `OWNER_IDS`) robi `git pull --ff-only`, w razie zmiany `package-lock.json`
+  także `npm ci --omit=dev`, i kończy proces — PM2 uruchamia bota ponownie. Aktualizacja jest przerywana,
+  gdy w katalogu są niezatwierdzone zmiany albo nie da się zrobić fast-forward.
+  Opcjonalnie `AUTO_UPDATE=true` robi to samo automatycznie co `AUTO_UPDATE_INTERVAL_MINUTES`
+  i zostawia notkę na kanale logów moderacji.
+- **`/status`** — wersja (commit), czas działania, ping WebSocket, pamięć, wersja Node.js, rozmiar bazy,
+  ostatnia kopia, liczba serwerów i informacja o zaległych aktualizacjach (z ostatniego sprawdzenia).
+
+### Komendy
+
+| Komenda | Opis |
+|---|---|
+| `/backup teraz \| lista` | Kopia bazy teraz / lista kopii *(Administrator; plik tylko dla `OWNER_IDS`)* |
+| `/aktualizuj sprawdz` | Sprawdza nowe commity na `origin/main` *(Administrator)* |
+| `/aktualizuj teraz` | Aktualizuje i restartuje bota *(tylko `OWNER_IDS`)* |
+| `/status` | Stan techniczny bota *(Administrator)* |
+
+### Zmienne środowiskowe
+
+| Zmienna | Domyślnie | Opis |
+|---|---|---|
+| `OWNER_IDS` | — | ID właścicieli bota (po przecinku) — `/aktualizuj teraz` i pobieranie kopii bazy |
+| `BACKUP_DIR` | `./backups` | Katalog kopii zapasowych bazy (jest w `.gitignore`) |
+| `BACKUP_RETENTION_DAYS` | `14` | Po ilu dniach kopie są usuwane |
+| `AUTO_UPDATE` | `false` | Automatyczna aktualizacja z `origin/main` + restart |
+| `AUTO_UPDATE_INTERVAL_MINUTES` | `10` | Co ile minut sprawdzać aktualizacje w trybie automatycznym |
+
+### Uruchomienie pod PM2
+
+Aktualizacja z poziomu Discorda zakłada, że bot działa pod [PM2](https://pm2.keymetrics.io/)
+z katalogu sklonowanego repozytorium (`git clone`), z gałęzią `main` śledzącą `origin/main`.
+
+```bash
+npm install -g pm2
+git clone https://github.com/ServerGunnik/NL_Bot.git && cd NL_Bot
+npm ci --omit=dev
+cp .env.example .env        # uzupełnij token, CLIENT_ID, OWNER_IDS ...
+npm run deploy              # rejestracja komend
+pm2 start ecosystem.config.js
+pm2 save                    # zapamiętaj listę procesów
+pm2 startup                 # autostart PM2 po restarcie serwera (wykonaj wypisane polecenie)
+```
+
+Przydatne polecenia: `pm2 logs hitmans-bot`, `pm2 restart hitmans-bot`, `pm2 status`.
+Plik `ecosystem.config.js` uruchamia `src/index.js` jako proces `hitmans-bot` z `autorestart: true` —
+po `/aktualizuj teraz` bot kończy się kodem 0, a PM2 od razu startuje go z nowym kodem.
+Jeśli aktualizacja dodaje nowe komendy, po restarcie uruchom jeszcze `npm run deploy`.
+## Społeczność: poziomy, panele ról, propozycje
+
+### Poziomy i XP
+- XP za wiadomości: losowo **15–25 XP**, najwyżej raz na minutę (cooldown chroni przed spamem); XP za każdą minutę rozmowy na kanale głosowym (**10 XP**, te same warunki co nagrody ekonomii: min. liczba osób, bez AFK i zagłuszonych). Działa niezależnie od tego, czy ekonomia jest włączona.
+- Krzywa poziomów: przejście z poziomu `l` na `l+1` kosztuje `5·l² + 50·l + 100` XP.
+- `/poziom [uzytkownik]` — karta z poziomem, XP, paskiem postępu i miejscem w rankingu; `/poziomy ranking [strona]`.
+- `/poziomy ustaw` *(admin)* — `wlaczone`, `ogloszenia` (ten sam kanał / stały kanał / wyłączone), `kanal`, `mnoznik` (0.1–10), `zachowaj_poprzednie` (czy role za niższe poziomy zostają po awansie).
+- `/poziomy nagroda dodaj poziom rola | usun poziom | lista` *(admin)* — role nadawane automatycznie przy awansie.
+- Poziom widać też w `/profil`.
+
+### Role do wyboru
+- `/role-panel utworz tytul [opis] [tryb]` → `/role-panel dodaj panel rola [emoji] [etykieta]` → `/role-panel opublikuj panel [kanal]`.
+- `/role-panel usun-role`, `/role-panel tryb` (jedna rola z panelu / wiele), `/role-panel lista`, `/role-panel usun`. Zmiany odświeżają już opublikowany panel.
+- Bezpieczeństwo: bot odmówi ról wyższych od jego roli, ról zarządzanych przez integracje oraz ról z uprawnieniami *Administrator, Zarządzanie serwerem/rolami/kanałami, Banowanie, Wyrzucanie, Wzmianka @everyone* (sprawdzane także przy każdym kliknięciu). Maks. 20 ról na panel.
+
+### Propozycje
+- `/propozycje kanal #kanal` *(admin)* — kanał, na który trafiają propozycje.
+- `/propozycja tresc` — karta z przyciskami 👍/👎 (jeden głos na osobę, można zmienić lub wycofać, liczniki na żywo) i wątkiem do dyskusji.
+- `/propozycje status id status:przyjeta|odrzucona|w-realizacji [powod]` *(admin)* — aktualizuje kartę (po przyjęciu/odrzuceniu głosowanie się zamyka) i wysyła autorowi DM.
+
+## Społeczność: urodziny, starboard, tickety pomocy
+
+### Urodziny
+
+| Komenda | Opis |
+|---|---|
+| `/urodziny ustaw dzien miesiac [rok]` | Zapisuje datę urodzin (rok opcjonalny — wtedy w życzeniach pojawi się wiek) |
+| `/urodziny usun` | Usuwa zapisaną datę |
+| `/urodziny lista` | Urodziny w ciągu najbliższych 30 dni (także przez przełom roku) |
+| `/urodziny kanal kanal [rola]` *(admin)* | Kanał życzeń i opcjonalna rola nadawana solenizantom na jeden dzień |
+
+Życzenia wysyłane są raz dziennie ok. **9:00 czasu polskiego** (Europe/Warsaw). Data ostatniej wysyłki
+jest zapisywana w bazie, więc restart bota nie wyśle ich drugi raz. Osoby urodzone 29 lutego świętują
+28 lutego w latach nieprzestępnych. Rola urodzinowa jest zdejmowana następnego dnia.
+
+### Starboard
+
+| Komenda | Opis |
+|---|---|
+| `/starboard kanal kanal` *(admin)* | Ustawia kanał starboardu i włącza funkcję |
+| `/starboard prog liczba` *(admin)* | Ile reakcji ⭐ potrzeba (domyślnie 3) |
+| `/starboard wylacz` *(admin)* | Wyłącza starboard (karty zostają na kanale) |
+
+Wiadomość, która zbierze wymaganą liczbę ⭐ (bez gwiazdki autora i botów), trafia na starboard jako karta
+z treścią, obrazkiem, autorem, licznikiem i linkiem. Licznik aktualizuje się na bieżąco; gdy gwiazdek
+będzie mniej niż próg (albo oryginał zostanie usunięty), karta znika. Działa także dla starszych wiadomości
+(partials `Reaction`/`User`, intent *Guild Message Reactions*).
+
+### Tickety pomocy
+
+| Komenda | Opis |
+|---|---|
+| `/ticket-panel ustaw kategoria rola-obslugi [kanal-logow]` *(admin)* | Kategoria kanałów, rola obsługi i kanał transkrypcji |
+| `/ticket-panel opublikuj [kanal] [tytul] [opis]` *(admin)* | Publikuje panel z przyciskami **Pomoc**, **Skarga**, **Inne** |
+
+Kliknięcie kategorii otwiera formularz z krótkim opisem, a bot tworzy prywatny kanał dla zgłaszającego
+i obsługi. Każdy może mieć **jeden otwarty ticket w danej kategorii**. W tickecie: **Przejmij** (obsługa)
+i **Zamknij** (z opcjonalnym powodem). Po zamknięciu bot generuje transkrypcję `.txt` (czas, autor, treść,
+linki do załączników), wysyła ją na kanał logów i w DM do zgłaszającego, a po 10 s usuwa kanał.
+Tickety pomocy są niezależne od ticketów podboju (`/podboj-panel`).
+
+## Aktywność klanu: urlopy, nieaktywni, raport tygodniowy, notatki
+
+Bot zapisuje ostatnią aktywność każdej osoby (wiadomość **lub** czas na kanale głosowym, bez kanału AFK)
+oraz dzienną aktywność, dołączenia i wyjścia — na tej podstawie działają poniższe komendy.
+
+| Komenda | Opis |
+|---|---|
+| `/urlop zglos do:<data> powod:<tekst>` | Zgłoszenie nieobecności. Data: `2026-11-20`, `20.11`, `20.11.2026`, `za 7d`, `za 2 tyg` (czas polski) |
+| `/urlop koniec [uzytkownik]` | Wcześniejsze zakończenie urlopu (oficer może zakończyć cudzy) |
+| `/urlop lista` | Trwające urlopy *(oficer)* |
+| `/urlop ustawienia [rola] [kanal] [wyczysc]` | Rola nadawana na czas urlopu i kanał powiadomień kadry (domyślnie kanał logów moderacji) *(admin)* |
+| `/nieaktywni [dni:14]` | Członkowie klanu (rola członka lub dowolna rola z hierarchii) bez aktywności od N dni, posortowani wg ostatniej aktywności; osoby na urlopie osobno *(oficer)* |
+| `/raport teraz [opublikuj]` | Raport z ostatnich 7 dni *(oficer)* |
+| `/raport kanal [kanal] [dni_nieaktywnosci]` | Kanał automatycznego raportu (poniedziałek 10:00, Europe/Warsaw); bez kanału — wyłącza *(admin)* |
+| `/notatka dodaj` / `lista` / `usun` | Notatki oficerów o członkach; liczba i najnowsza notatka widoczne w `/profil` tylko dla kadry *(oficer)* |
+
+**Oficer** = administrator, osoba z uprawnieniem *Moderowanie członków* albo posiadacz najwyższego stopnia hierarchii.
+Urlopy kończą się automatycznie (scheduler zdejmuje rolę urlopową i powiadamia kadrę). Raport tygodniowy zawiera:
+dołączenia/wyjścia, rekrutację, najaktywniejszych (wiadomości i głos), liczbę akcji moderacyjnych, ekonomię (gdy włączona)
+i liczbę nieaktywnych. Wysłany tydzień jest zapisywany w bazie, więc restart bota nie powoduje podwójnego raportu.

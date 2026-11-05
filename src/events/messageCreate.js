@@ -5,6 +5,7 @@ const { Events } = require('discord.js');
 const activity = require('../database/repositories/activity');
 const automod = require('../services/automod');
 const economyService = require('../services/economy');
+const levelsService = require('../services/levels');
 const logger = require('../utils/logger');
 
 /** Automoderacja, zliczanie aktywnosci (/stats, /profil) i nagrody ekonomii. */
@@ -22,6 +23,7 @@ module.exports = {
 
     try {
       activity.trackMessage(message.guild.id, message.author.id);
+      require('../services/clanActivity').onMessage(message);
     } catch (error) {
       logger.debug('Nie udalo sie zapisac aktywnosci:', error.message);
     }
@@ -31,5 +33,10 @@ module.exports = {
     } catch (error) {
       logger.debug('Nie udalo sie naliczyc nagrody za wiadomosc:', error.message);
     }
+
+    // Poziomy i XP — niezalezne od ekonomii.
+    levelsService.handleMessage(message).catch((error) => {
+      logger.debug('Nie udalo sie naliczyc XP za wiadomosc:', error.message);
+    });
   },
 };

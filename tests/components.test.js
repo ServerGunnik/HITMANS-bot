@@ -127,7 +127,7 @@ describe('panele rekrutacji', () => {
 
     const pending = audit(recruitmentService.buildApplicationCard(application, { guild: guildMock })).json;
     const buttons = JSON.stringify(pending).match(/"custom_id":"rekrutacja:[a-z]+:\d+"/g) ?? [];
-    assert.equal(buttons.length, 3, 'Akceptuj / Odrzuc / Profil');
+    assert.equal(buttons.length, 4, 'Umow rekrutacje glosowa / Akceptuj / Odrzuc / Profil');
 
     const decided = recruitment.decideApplication(application.id, { status: 'accepted', reviewerId: 'admin' });
     const closed = audit(recruitmentService.buildApplicationCard(decided, { guild: guildMock })).json;

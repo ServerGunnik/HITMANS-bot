@@ -14,6 +14,19 @@ process.env.CLIENT_ID = 'test-client';
 process.env.DISCORD_TOKEN = 'test-token';
 process.env.LOG_LEVEL = 'error';
 
-process.on('exit', () => fs.rmSync(dir, { recursive: true, force: true }));
+// Na Windowsie nie da sie usunac otwartego pliku bazy — najpierw zamykamy
+// polaczenie, a ewentualny blad sprzatania nie moze oblac calego testu.
+process.on('exit', () => {
+  try {
+    require('../src/database').close();
+  } catch {
+    // baza mogla nie zostac otwarta
+  }
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    // katalog tymczasowy posprzata system
+  }
+});
 
 module.exports = { dir };

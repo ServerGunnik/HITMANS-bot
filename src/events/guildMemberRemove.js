@@ -16,6 +16,20 @@ const { timestamp, truncate } = require('../utils/format');
 module.exports = {
   name: Events.GuildMemberRemove,
   async execute(member) {
+    require('../services/clanActivity').onMemberEvent(member, 'leave');
+
+    // Zapamietujemy, czy wychodzacy byl czlonkiem — tylko wtedy rola wroci przy powrocie.
+    // Przy niepelnych danych (partial, brak rol w cache) zakladamy, ze nie byl.
+    if (!member.user?.bot) {
+      const { member_role_id: memberRoleId } = guilds.get(member.guild.id);
+      const hadMemberRole = Boolean(memberRoleId && !member.partial && member.roles?.cache?.has(memberRoleId));
+      try {
+        recruitment.recordExit(member.guild.id, member.id, hadMemberRole);
+      } catch (error) {
+        logger.debug('Nie udalo sie zapisac wyjscia czlonka:', error.message);
+      }
+    }
+
     const roles = member.roles?.cache
       ?.filter((role) => role.id !== member.guild.id)
       .map(String)

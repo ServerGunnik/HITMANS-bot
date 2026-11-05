@@ -385,3 +385,348 @@ CREATE TABLE IF NOT EXISTS conquest_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_conquest_guild ON conquest_tickets (guild_id, status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_conquest_channel ON conquest_tickets (channel_id);
+
+-- =============================================================================
+--  POZIOMY I XP (wiadomosci + kanaly glosowe, nagrody w postaci rol)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS member_levels (
+  guild_id           TEXT    NOT NULL,
+  user_id            TEXT    NOT NULL,
+  xp                 INTEGER NOT NULL DEFAULT 0,     -- calkowite XP
+  level              INTEGER NOT NULL DEFAULT 0,     -- poziom wyliczony z XP (do wykrywania awansu)
+  messages           INTEGER NOT NULL DEFAULT 0,     -- wiadomosci, ktore daly XP
+  voice_minutes      INTEGER NOT NULL DEFAULT 0,
+  last_message_xp_at INTEGER,                        -- cooldown XP za wiadomosci
+  updated_at         INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_member_levels_rank ON member_levels (guild_id, xp DESC);
+
+CREATE TABLE IF NOT EXISTS level_settings (
+  guild_id            TEXT    PRIMARY KEY,
+  enabled             INTEGER NOT NULL DEFAULT 1,
+  announce_mode       TEXT    NOT NULL DEFAULT 'same',  -- same | channel | off
+  announce_channel_id TEXT,
+  multiplier          REAL    NOT NULL DEFAULT 1,
+  keep_previous       INTEGER NOT NULL DEFAULT 1,       -- 1 = nagrody sie kumuluja, 0 = tylko najwyzsza
+  updated_at          INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS level_rewards (
+  guild_id   TEXT    NOT NULL,
+  level      INTEGER NOT NULL,
+  role_id    TEXT    NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, level)
+);
+
+-- =============================================================================
+--  ROLE DO WYBORU (panele z przyciskami)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS role_panels (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id    TEXT    NOT NULL,
+  title       TEXT    NOT NULL,
+  description TEXT,
+  mode        TEXT    NOT NULL DEFAULT 'multi',   -- multi | single
+  channel_id  TEXT,
+  message_id  TEXT,
+  created_by  TEXT    NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_role_panels_guild ON role_panels (guild_id, id);
+
+CREATE TABLE IF NOT EXISTS role_panel_entries (
+  panel_id   INTEGER NOT NULL,
+  role_id    TEXT    NOT NULL,
+  label      TEXT    NOT NULL,
+  emoji      TEXT,
+  position   INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (panel_id, role_id),
+  FOREIGN KEY (panel_id) REFERENCES role_panels(id) ON DELETE CASCADE
+);
+
+-- =============================================================================
+--  PROPOZYCJE (karty z glosowaniem 👍/👎 i statusem)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS suggestion_settings (
+  guild_id   TEXT    PRIMARY KEY,
+  channel_id TEXT,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS suggestions (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id      TEXT    NOT NULL,
+  channel_id    TEXT    NOT NULL,
+  message_id    TEXT,
+  thread_id     TEXT,
+  author_id     TEXT    NOT NULL,
+  content       TEXT    NOT NULL,
+  status        TEXT    NOT NULL DEFAULT 'pending',  -- pending | accepted | rejected | in_progress
+  status_reason TEXT,
+  status_by     TEXT,
+  status_at     INTEGER,
+  created_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_suggestions_guild ON suggestions (guild_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS suggestion_votes (
+  suggestion_id INTEGER NOT NULL,
+  user_id       TEXT    NOT NULL,
+  vote          INTEGER NOT NULL,                    -- 1 = za, -1 = przeciw
+  created_at    INTEGER NOT NULL,
+  PRIMARY KEY (suggestion_id, user_id),
+  FOREIGN KEY (suggestion_id) REFERENCES suggestions(id) ON DELETE CASCADE
+);
+
+
+-- =============================================================================
+--  WYDARZENIA / WOJNY KLANOWE (zapisy Bede/Moze/Nie bede, przypomnienia, obecnosc)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS events (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id      TEXT    NOT NULL,
+  channel_id    TEXT    NOT NULL,
+  message_id    TEXT,
+  author_id     TEXT    NOT NULL,
+  title         TEXT    NOT NULL,
+  description   TEXT,
+  starts_at     INTEGER NOT NULL,
+  ping_role_id  TEXT,
+  dm_reminders  INTEGER NOT NULL DEFAULT 0,
+  status        TEXT    NOT NULL DEFAULT 'scheduled',  -- scheduled | started | cancelled
+  reminded_30   INTEGER NOT NULL DEFAULT 0,
+  reminded_5    INTEGER NOT NULL DEFAULT 0,
+  created_at    INTEGER NOT NULL,
+  updated_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_events_guild ON events (guild_id, status, starts_at);
+CREATE INDEX IF NOT EXISTS idx_events_due ON events (status, starts_at);
+
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  event_id    INTEGER NOT NULL,
+  user_id     TEXT    NOT NULL,
+  status      TEXT    NOT NULL,                       -- yes | maybe | no
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (event_id, user_id),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS event_attendance (
+  event_id    INTEGER NOT NULL,
+  user_id     TEXT    NOT NULL,
+  present     INTEGER NOT NULL,                       -- 1 = obecny, 0 = nieobecny
+  marked_by   TEXT    NOT NULL,
+  marked_at   INTEGER NOT NULL,
+  PRIMARY KEY (event_id, user_id),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_event_attendance_user ON event_attendance (user_id);
+
+-- =============================================================================
+--  WYNIKI WOJEN / PODBOJOW
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS wars (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id     TEXT    NOT NULL,
+  opponent     TEXT    NOT NULL,
+  result       TEXT    NOT NULL,                      -- win | loss | draw
+  score        TEXT,
+  event_id     INTEGER,                               -- opcjonalne powiazanie z events.id
+  recorded_by  TEXT    NOT NULL,
+  fought_at    INTEGER NOT NULL,
+  created_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wars_guild ON wars (guild_id, fought_at DESC);
+
+CREATE TABLE IF NOT EXISTS war_participants (
+  war_id   INTEGER NOT NULL,
+  user_id  TEXT    NOT NULL,
+  PRIMARY KEY (war_id, user_id),
+  FOREIGN KEY (war_id) REFERENCES wars(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_war_participants_user ON war_participants (user_id);
+
+-- =============================================================================
+--  PRZYPOMNIENIA (/przypomnij — dostarczane przez scheduler, przetrwaja restart)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS reminders (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id    TEXT    NOT NULL,
+  channel_id  TEXT    NOT NULL,                       -- kanal awaryjny, gdy DM sa zablokowane
+  user_id     TEXT    NOT NULL,
+  content     TEXT    NOT NULL,
+  remind_at   INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reminders_due ON reminders (remind_at);
+CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders (guild_id, user_id, remind_at);
+
+
+-- =============================================================================
+--  URODZINY (zyczenia o 9:00 Europe/Warsaw + rola na jeden dzien)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS birthdays (
+  guild_id    TEXT    NOT NULL,
+  user_id     TEXT    NOT NULL,
+  day         INTEGER NOT NULL,
+  month       INTEGER NOT NULL,
+  year        INTEGER,                              -- opcjonalny rok urodzenia (wiek w zyczeniach)
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_birthdays_date ON birthdays (guild_id, month, day);
+
+CREATE TABLE IF NOT EXISTS birthday_settings (
+  guild_id          TEXT PRIMARY KEY,
+  channel_id        TEXT,
+  role_id           TEXT,                           -- rola nadawana na dzien urodzin
+  last_posted_date  TEXT                            -- 'YYYY-MM-DD' (Europe/Warsaw) ostatnich zyczen
+);
+
+CREATE TABLE IF NOT EXISTS birthday_role_grants (
+  guild_id     TEXT NOT NULL,
+  user_id      TEXT NOT NULL,
+  role_id      TEXT NOT NULL,
+  granted_date TEXT NOT NULL,                       -- 'YYYY-MM-DD' — rola zdejmowana nastepnego dnia
+  PRIMARY KEY (guild_id, user_id, role_id)
+);
+
+-- =============================================================================
+--  STARBOARD (wiadomosci z N reakcjami ⭐ trafiaja na osobny kanal)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS starboard_settings (
+  guild_id    TEXT    PRIMARY KEY,
+  channel_id  TEXT,
+  threshold   INTEGER NOT NULL DEFAULT 3,
+  enabled     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS starboard_posts (
+  source_message_id     TEXT    PRIMARY KEY,
+  guild_id              TEXT    NOT NULL,
+  source_channel_id     TEXT    NOT NULL,
+  author_id             TEXT    NOT NULL,
+  starboard_channel_id  TEXT    NOT NULL,
+  starboard_message_id  TEXT    NOT NULL,
+  stars                 INTEGER NOT NULL DEFAULT 0,
+  created_at            INTEGER NOT NULL,
+  updated_at            INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_starboard_posts_guild ON starboard_posts (guild_id, stars DESC);
+
+-- =============================================================================
+--  TICKETY POMOCY (ogolne zgloszenia — niezalezne od ticketow podboju)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS support_ticket_settings (
+  guild_id        TEXT PRIMARY KEY,
+  category_id     TEXT,                             -- kategoria kanalow ticketow
+  staff_role_id   TEXT,                             -- rola obslugi
+  log_channel_id  TEXT                              -- kanal na transkrypcje
+);
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id      TEXT    NOT NULL,
+  user_id       TEXT    NOT NULL,
+  user_tag      TEXT,
+  category      TEXT    NOT NULL,                   -- pomoc | skarga | inne
+  description   TEXT    NOT NULL,
+  channel_id    TEXT,
+  status        TEXT    NOT NULL DEFAULT 'open',    -- open | closed
+  claimed_by    TEXT,
+  created_at    INTEGER NOT NULL,
+  closed_at     INTEGER,
+  closed_by     TEXT,
+  close_reason  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets (guild_id, user_id, category, status);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_channel ON support_tickets (channel_id);
+
+
+-- =============================================================================
+--  AKTYWNOSC KLANU: nieaktywni, urlopy, raport tygodniowy, notatki oficerow
+-- =============================================================================
+
+-- Ustawienia funkcji aktywnosci (osobna tabela, zeby nie rozbudowywac guild_settings)
+CREATE TABLE IF NOT EXISTS activity_settings (
+  guild_id           TEXT    PRIMARY KEY,
+  leave_role_id      TEXT,                          -- rola nadawana na czas urlopu
+  officer_channel_id TEXT,                          -- NULL = kanal logow moderacji
+  report_channel_id  TEXT,                          -- NULL = raport tygodniowy wylaczony
+  report_last_week   TEXT,                          -- klucz ostatnio wyslanego raportu (YYYY-MM-DD poniedzialku)
+  inactive_days      INTEGER NOT NULL DEFAULT 14,
+  updated_at         INTEGER NOT NULL
+);
+
+-- Dzienna aktywnosc pojedynczych osob (wiadomosci + czas na kanalach glosowych)
+CREATE TABLE IF NOT EXISTS member_activity_days (
+  guild_id      TEXT    NOT NULL,
+  user_id       TEXT    NOT NULL,
+  day           TEXT    NOT NULL,                   -- YYYY-MM-DD (UTC)
+  messages      INTEGER NOT NULL DEFAULT 0,
+  voice_seconds INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (guild_id, user_id, day)
+);
+CREATE INDEX IF NOT EXISTS idx_activity_days_day ON member_activity_days (guild_id, day);
+
+-- Dolaczenia i wyjscia z serwera (do raportu tygodniowego)
+CREATE TABLE IF NOT EXISTS member_events (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id   TEXT    NOT NULL,
+  user_id    TEXT    NOT NULL,
+  type       TEXT    NOT NULL,                      -- join | leave
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_member_events_guild ON member_events (guild_id, created_at);
+
+-- Urlopy czlonkow
+CREATE TABLE IF NOT EXISTS member_leaves (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id   TEXT    NOT NULL,
+  user_id    TEXT    NOT NULL,
+  reason     TEXT    NOT NULL,
+  starts_at  INTEGER NOT NULL,
+  ends_at    INTEGER NOT NULL,
+  ended_at   INTEGER,                               -- NULL = urlop trwa
+  end_reason TEXT,                                  -- manual | expired | officer
+  ended_by   TEXT,
+  role_id    TEXT,                                  -- rola urlopowa nadana przy zgloszeniu
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_member_leaves_active ON member_leaves (guild_id, ended_at, user_id);
+CREATE INDEX IF NOT EXISTS idx_member_leaves_expiry ON member_leaves (ended_at, ends_at);
+
+-- Notatki oficerow o czlonkach (widoczne tylko dla kadry)
+CREATE TABLE IF NOT EXISTS officer_notes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id   TEXT    NOT NULL,
+  user_id    TEXT    NOT NULL,
+  author_id  TEXT    NOT NULL,
+  content    TEXT    NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_officer_notes_user ON officer_notes (guild_id, user_id, id DESC);
+
+-- =============================================================================
+--  WYJSCIA CZLONKOW (czy przy wyjsciu mial role czlonka — przywracanie po powrocie)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS member_exits (
+  guild_id         TEXT    NOT NULL,
+  user_id          TEXT    NOT NULL,
+  had_member_role  INTEGER NOT NULL DEFAULT 0,
+  left_at          INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id)
+);

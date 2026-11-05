@@ -73,6 +73,11 @@ const COLUMNS = {
     // 'reviewer'  = pytanie ankiety oceny wypelnianej przez rekrutera.
     ['audience', "TEXT NOT NULL DEFAULT 'applicant'"],
   ],
+  // aktywnosc klanu (nieaktywni / raport tygodniowy): czas na kanalach glosowych
+  member_activity: [
+    ['last_voice_at', 'INTEGER'],
+    ['voice_seconds', 'INTEGER NOT NULL DEFAULT 0'],
+  ],
 };
 
 /** Dodaje brakujace kolumny do istniejacych tabel. */

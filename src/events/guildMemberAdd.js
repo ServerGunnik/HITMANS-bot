@@ -3,6 +3,7 @@
 const { Events } = require('discord.js');
 
 const guilds = require('../database/repositories/guilds');
+const recruitment = require('../database/repositories/recruitment');
 const serverLogs = require('../services/serverLogs');
 const security = require('../services/security');
 const logger = require('../utils/logger');
@@ -16,6 +17,8 @@ const { timestamp } = require('../utils/format');
 module.exports = {
   name: Events.GuildMemberAdd,
   async execute(member) {
+    require('../services/clanActivity').onMemberEvent(member, 'join');
+
     await serverLogs.send(member.guild, 'members', {
       title: member.user.bot ? 'Bot dodany na serwer' : 'Nowy czlonek',
       color: COLORS.success,
@@ -36,6 +39,24 @@ module.exports = {
     if (member.user.bot) return;
 
     const settings = guilds.get(member.guild.id);
+
+    // Ktos, kto zdal rekrutacje i wychodzac z serwera nadal byl czlonkiem, od razu dostaje
+    // role z powrotem. Osoba usunieta wczesniej z klanu (bez roli czlonka) jej nie odzyska.
+    const latest = recruitment.getLatestApplication(member.guild.id, member.id);
+    const memberRole = settings.member_role_id ? member.guild.roles.cache.get(settings.member_role_id) : null;
+    if (
+      latest?.status === 'accepted' &&
+      memberRole?.editable &&
+      recruitment.hadMemberRoleOnExit(member.guild.id, member.id)
+    ) {
+      try {
+        await member.roles.add(memberRole, `Powrot czlonka (zgloszenie #${latest.id} zaakceptowane)`);
+        return;
+      } catch (error) {
+        logger.warn(`Nie udalo sie przywrocic roli czlonka uzytkownikowi ${member.id}:`, error.message);
+      }
+    }
+
     if (!settings.guest_role_id) return;
 
     const role = member.guild.roles.cache.get(settings.guest_role_id);
