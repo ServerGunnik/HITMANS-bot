@@ -485,3 +485,25 @@ Po dodaniu uruchom `npm run deploy`.
 ## Licencja
 
 MIT
+
+---
+
+## Społeczność: poziomy, panele ról, propozycje
+
+### Poziomy i XP
+- XP za wiadomości: losowo **15–25 XP**, najwyżej raz na minutę (cooldown chroni przed spamem); XP za każdą minutę rozmowy na kanale głosowym (**10 XP**, te same warunki co nagrody ekonomii: min. liczba osób, bez AFK i zagłuszonych). Działa niezależnie od tego, czy ekonomia jest włączona.
+- Krzywa poziomów: przejście z poziomu `l` na `l+1` kosztuje `5·l² + 50·l + 100` XP.
+- `/poziom [uzytkownik]` — karta z poziomem, XP, paskiem postępu i miejscem w rankingu; `/poziomy ranking [strona]`.
+- `/poziomy ustaw` *(admin)* — `wlaczone`, `ogloszenia` (ten sam kanał / stały kanał / wyłączone), `kanal`, `mnoznik` (0.1–10), `zachowaj_poprzednie` (czy role za niższe poziomy zostają po awansie).
+- `/poziomy nagroda dodaj poziom rola | usun poziom | lista` *(admin)* — role nadawane automatycznie przy awansie.
+- Poziom widać też w `/profil`.
+
+### Role do wyboru
+- `/role-panel utworz tytul [opis] [tryb]` → `/role-panel dodaj panel rola [emoji] [etykieta]` → `/role-panel opublikuj panel [kanal]`.
+- `/role-panel usun-role`, `/role-panel tryb` (jedna rola z panelu / wiele), `/role-panel lista`, `/role-panel usun`. Zmiany odświeżają już opublikowany panel.
+- Bezpieczeństwo: bot odmówi ról wyższych od jego roli, ról zarządzanych przez integracje oraz ról z uprawnieniami *Administrator, Zarządzanie serwerem/rolami/kanałami, Banowanie, Wyrzucanie, Wzmianka @everyone* (sprawdzane także przy każdym kliknięciu). Maks. 20 ról na panel.
+
+### Propozycje
+- `/propozycje kanal #kanal` *(admin)* — kanał, na który trafiają propozycje.
+- `/propozycja tresc` — karta z przyciskami 👍/👎 (jeden głos na osobę, można zmienić lub wycofać, liczniki na żywo) i wątkiem do dyskusji.
+- `/propozycje status id status:przyjeta|odrzucona|w-realizacji [powod]` *(admin)* — aktualizuje kartę (po przyjęciu/odrzuceniu głosowanie się zamyka) i wysyła autorowi DM.

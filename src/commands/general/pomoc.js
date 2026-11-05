@@ -57,6 +57,17 @@ const SECTIONS = [
       '`/pomoc` — ta lista',
     ],
   },
+  {
+    name: '🌟 Spolecznosc',
+    lines: [
+      '`/poziom [uzytkownik]` — poziom, XP i miejsce w rankingu',
+      '`/poziomy ranking` — ranking poziomow serwera',
+      '`/poziomy ustaw` / `/poziomy nagroda dodaj | usun | lista` — XP i role za poziomy *(admin)*',
+      '`/role-panel utworz | dodaj | usun-role | tryb | opublikuj` — panele rol do wyboru *(admin)*',
+      '`/propozycja <tresc>` — zglos propozycje do glosowania',
+      '`/propozycje kanal | status` — kanal i decyzje w sprawie propozycji *(admin)*',
+    ],
+  },
 ];
 
 module.exports = {

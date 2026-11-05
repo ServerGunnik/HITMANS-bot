@@ -105,6 +105,13 @@ function startVoiceRewards(client) {
     } catch (error) {
       logger.warn('Blad naliczania nagrod glosowych:', error.message);
     }
+
+    // XP za kanaly glosowe (poziomy) — dziala takze przy wylaczonej ekonomii.
+    try {
+      require('./levels').runVoiceTick(client);
+    } catch (error) {
+      logger.warn('Blad naliczania XP glosowego:', error.message);
+    }
   }, VOICE_TICK_MS);
 
   timer.unref();
