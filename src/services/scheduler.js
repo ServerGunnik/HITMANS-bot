@@ -78,6 +78,7 @@ async function tick(client) {
   await processExpiredMutes(client).catch((error) => logger.warn('Scheduler mutow:', error.message));
 
   verification.cleanup();
+  await require('./birthdays').tick(client).catch((error) => logger.warn('Scheduler urodzin:', error.message));
 }
 
 function start(client) {

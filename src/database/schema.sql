@@ -385,3 +385,87 @@ CREATE TABLE IF NOT EXISTS conquest_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_conquest_guild ON conquest_tickets (guild_id, status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_conquest_channel ON conquest_tickets (channel_id);
+
+-- =============================================================================
+--  URODZINY (zyczenia o 9:00 Europe/Warsaw + rola na jeden dzien)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS birthdays (
+  guild_id    TEXT    NOT NULL,
+  user_id     TEXT    NOT NULL,
+  day         INTEGER NOT NULL,
+  month       INTEGER NOT NULL,
+  year        INTEGER,                              -- opcjonalny rok urodzenia (wiek w zyczeniach)
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_birthdays_date ON birthdays (guild_id, month, day);
+
+CREATE TABLE IF NOT EXISTS birthday_settings (
+  guild_id          TEXT PRIMARY KEY,
+  channel_id        TEXT,
+  role_id           TEXT,                           -- rola nadawana na dzien urodzin
+  last_posted_date  TEXT                            -- 'YYYY-MM-DD' (Europe/Warsaw) ostatnich zyczen
+);
+
+CREATE TABLE IF NOT EXISTS birthday_role_grants (
+  guild_id     TEXT NOT NULL,
+  user_id      TEXT NOT NULL,
+  role_id      TEXT NOT NULL,
+  granted_date TEXT NOT NULL,                       -- 'YYYY-MM-DD' — rola zdejmowana nastepnego dnia
+  PRIMARY KEY (guild_id, user_id, role_id)
+);
+
+-- =============================================================================
+--  STARBOARD (wiadomosci z N reakcjami ⭐ trafiaja na osobny kanal)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS starboard_settings (
+  guild_id    TEXT    PRIMARY KEY,
+  channel_id  TEXT,
+  threshold   INTEGER NOT NULL DEFAULT 3,
+  enabled     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS starboard_posts (
+  source_message_id     TEXT    PRIMARY KEY,
+  guild_id              TEXT    NOT NULL,
+  source_channel_id     TEXT    NOT NULL,
+  author_id             TEXT    NOT NULL,
+  starboard_channel_id  TEXT    NOT NULL,
+  starboard_message_id  TEXT    NOT NULL,
+  stars                 INTEGER NOT NULL DEFAULT 0,
+  created_at            INTEGER NOT NULL,
+  updated_at            INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_starboard_posts_guild ON starboard_posts (guild_id, stars DESC);
+
+-- =============================================================================
+--  TICKETY POMOCY (ogolne zgloszenia — niezalezne od ticketow podboju)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS support_ticket_settings (
+  guild_id        TEXT PRIMARY KEY,
+  category_id     TEXT,                             -- kategoria kanalow ticketow
+  staff_role_id   TEXT,                             -- rola obslugi
+  log_channel_id  TEXT                              -- kanal na transkrypcje
+);
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id      TEXT    NOT NULL,
+  user_id       TEXT    NOT NULL,
+  user_tag      TEXT,
+  category      TEXT    NOT NULL,                   -- pomoc | skarga | inne
+  description   TEXT    NOT NULL,
+  channel_id    TEXT,
+  status        TEXT    NOT NULL DEFAULT 'open',    -- open | closed
+  claimed_by    TEXT,
+  created_at    INTEGER NOT NULL,
+  closed_at     INTEGER,
+  closed_by     TEXT,
+  close_reason  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets (guild_id, user_id, category, status);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_channel ON support_tickets (channel_id);

@@ -17,13 +17,16 @@ function buildClient() {
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
+    // starboard: reakcje ⭐
+    GatewayIntentBits.GuildMessageReactions,
   ];
 
   if (config.enablePresenceIntent) intents.push(GatewayIntentBits.GuildPresences);
 
   const client = new Client({
     intents,
-    partials: [Partials.GuildMember, Partials.Message, Partials.Channel],
+    // Reaction + User: reakcje na wiadomosciach spoza cache (starboard).
+    partials: [Partials.GuildMember, Partials.Message, Partials.Channel, Partials.Reaction, Partials.User],
     allowedMentions: { parse: ['users'], repliedUser: false },
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,

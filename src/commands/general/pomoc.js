@@ -57,6 +57,15 @@ const SECTIONS = [
       '`/pomoc` — ta lista',
     ],
   },
+  {
+    name: '🎉 Spolecznosc',
+    lines: [
+      '`/urodziny ustaw | usun | lista` — Twoje urodziny i nadchodzace swieta',
+      '`/urodziny kanal` — kanal zyczen i rola na dzien urodzin *(admin)*',
+      '`/starboard kanal | prog | wylacz` — wiadomosci z ⭐ na osobnym kanale *(admin)*',
+      '`/ticket-panel ustaw | opublikuj` — tickety pomocy (Pomoc, Skarga, Inne) *(admin)*',
+    ],
+  },
 ];
 
 module.exports = {
