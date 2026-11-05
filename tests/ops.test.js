@@ -185,6 +185,37 @@ describe('aktualizacja bota', () => {
     assert.ok(!runner2.calls.some((call) => call.startsWith('npm')));
   });
 
+  it('rejestruje komendy slash tylko, gdy zmienily sie pliki komend', async () => {
+    let head = 'aaa1111';
+    const responses = {
+      status: '',
+      'rev-list': '1',
+      log: 'bbb2222\tNowa komenda',
+      'merge-base': '',
+      'rev-parse': () => head,
+      diff: 'src/commands/general/nowa.js\n',
+      pull: () => {
+        head = 'bbb2222';
+        return '';
+      },
+    };
+    const isDeploy = (call) => call.includes('deploy-commands.js');
+
+    const runner = fakeRunner(responses);
+    updater._setRunner(runner);
+    const result = await updater.update();
+    assert.equal(result.deployed, true);
+    assert.ok(runner.calls.some(isDeploy));
+
+    head = 'aaa1111';
+    responses.diff = 'src/services/economy.js\n';
+    const runner2 = fakeRunner(responses);
+    updater._setRunner(runner2);
+    const second = await updater.update();
+    assert.equal(second.deployed, false);
+    assert.ok(!runner2.calls.some(isDeploy));
+  });
+
   it('nic nie robi, gdy bot jest aktualny', async () => {
     const runner = fakeRunner({ status: '', 'rev-list': '0' });
     updater._setRunner(runner);

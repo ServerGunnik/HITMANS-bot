@@ -1,6 +1,6 @@
 'use strict';
 
-const { MediaGalleryBuilder, MediaGalleryItemBuilder } = require('discord.js');
+const { MediaGalleryBuilder, MediaGalleryItemBuilder, PermissionFlagsBits } = require('discord.js');
 
 const starboardRepo = require('../database/repositories/starboard');
 const { COLORS, V2_FLAGS, button, panel, row, separator, text } = require('../ui/components');
@@ -98,19 +98,6 @@ function buildCard(message, stars) {
   return container;
 }
 
-/** Pobiera wszystkich uzytkownikow reakcji ⭐ (stronicowanie po 100). */
-async function fetchStarUsers(reaction) {
-  const users = [];
-  let after;
-  for (let page = 0; page < 20; page += 1) {
-    const batch = await reaction.users.fetch({ limit: 100, after });
-    users.push(...batch.values());
-    if (batch.size < 100) break;
-    after = batch.lastKey();
-  }
-  return users;
-}
-
 async function fetchStarboardMessage(guild, post) {
   const channel = guild.channels.cache.get(post.starboard_channel_id);
   if (!channel?.isTextBased()) return null;
@@ -127,6 +114,35 @@ async function removeCard(guild, sourceMessageId) {
   return true;
 }
 
+/**
+ * Czy wiadomosc mozna pokazac na starboardzie: kanal zrodlowy musi byc
+ * widoczny dla @everyone, a tresc NSFW tylko na kanale NSFW.
+ */
+function isPublicSource(message, starboardChannel) {
+  const source = message.channel;
+  if (!source) return true;
+  const everyone = message.guild.roles.everyone;
+  const permissions = source.permissionsFor?.(everyone);
+  if (permissions && !permissions.has(PermissionFlagsBits.ViewChannel)) return false;
+  const nsfw = Boolean(source.nsfw ?? source.parent?.nsfw);
+  return !nsfw || Boolean(starboardChannel?.nsfw);
+}
+
+/**
+ * Liczba gwiazdek bez autora i botow. Ponizej progu wystarcza licznik reakcji
+ * (wynik i tak jest za maly); powyzej pobieramy tylko pierwsza strone
+ * reagujacych, zamiast wszystkich przy kazdej nowej gwiazdce.
+ */
+async function countReactionStars(reaction, authorId, threshold) {
+  const total = Number.isFinite(reaction.count) ? reaction.count : null;
+  if (total !== null && total < threshold) return total;
+
+  const firstPage = [...(await reaction.users.fetch({ limit: 100 })).values()];
+  const counted = countStars(firstPage, authorId);
+  if (total === null || total <= firstPage.length) return counted;
+  return total - (firstPage.length - counted);
+}
+
 /** Przelicza gwiazdki wiadomosci i tworzy / aktualizuje / usuwa karte. */
 async function sync(message) {
   if (!message?.guild) return 'none';
@@ -138,13 +154,20 @@ async function sync(message) {
     if (message.partial) message = await message.fetch();
     if (!message.author || message.author.bot) return 'none';
 
-    const reaction = message.reactions.cache.find((entry) => entry.emoji.name === STAR);
-    const stars = reaction ? countStars(await fetchStarUsers(reaction), message.author.id) : 0;
     const existing = starboardRepo.getPost(message.id);
+    const channel = message.guild.channels.cache.get(settings.channel_id);
+    // Wiadomosci z kanalow prywatnych (oficerowie, tickety, logi) albo NSFW
+    // nie moga trafic na publiczny starboard.
+    if (!isPublicSource(message, channel)) {
+      if (existing) await removeCard(message.guild, message.id);
+      return existing ? 'delete' : 'none';
+    }
+
+    const reaction = message.reactions.cache.find((entry) => entry.emoji.name === STAR);
+    const stars = reaction ? await countReactionStars(reaction, message.author.id, settings.threshold) : 0;
     const action = decide({ stars, threshold: settings.threshold, existing });
 
     if (action === 'create') {
-      const channel = message.guild.channels.cache.get(settings.channel_id);
       if (!channel?.isTextBased()) return 'none';
       const card = await channel.send({
         components: [buildCard(message, stars)],
@@ -191,6 +214,8 @@ async function handleReaction(reaction) {
 module.exports = {
   STAR,
   countStars,
+  isPublicSource,
+  countReactionStars,
   decide,
   findImage,
   buildCard,

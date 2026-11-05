@@ -2,8 +2,11 @@
 
 /**
  * Czas lokalny klanu (Europe/Warsaw) — daty urlopow i termin raportu tygodniowego.
- * Wlasny, maly parser: nie zalezy od innych parserow czasu w projekcie.
+ * Formaty z sama data (koniec dnia) obsluguje parseLeaveDate; wszystko, co ma
+ * godzine ("jutro 20:00", "20.11 18:00"), trafia do wspolnego parseTime z utils/time.
  */
+const { parseTime } = require('./time');
+
 const TIME_ZONE = 'Europe/Warsaw';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -104,11 +107,13 @@ function parseLeaveDate(input, now = Date.now()) {
   if (match) {
     const amount = Number(match[1]);
     const unit = RELATIVE_UNITS.find(([pattern]) => pattern.test(match[2]));
-    if (!unit || amount <= 0) return null;
-    return now + amount * unit[1];
+    if (amount <= 0) return null;
+    if (unit) return now + amount * unit[1];
+    // nieznana tu jednostka (np. "minut") — sprobuje parseTime ponizej
   }
 
-  return null;
+  // Pozostale formaty (z godzina) — ten sam parser co /event i /przypomnij.
+  return parseTime(value, { now });
 }
 
 /** Klucz dnia (YYYY-MM-DD) z czesci daty. */

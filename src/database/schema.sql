@@ -718,3 +718,15 @@ CREATE TABLE IF NOT EXISTS officer_notes (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_officer_notes_user ON officer_notes (guild_id, user_id, id DESC);
+
+-- =============================================================================
+--  WYJSCIA CZLONKOW (czy przy wyjsciu mial role czlonka — przywracanie po powrocie)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS member_exits (
+  guild_id         TEXT    NOT NULL,
+  user_id          TEXT    NOT NULL,
+  had_member_role  INTEGER NOT NULL DEFAULT 0,
+  left_at          INTEGER NOT NULL,
+  PRIMARY KEY (guild_id, user_id)
+);

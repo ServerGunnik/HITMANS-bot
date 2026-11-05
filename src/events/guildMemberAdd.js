@@ -40,10 +40,15 @@ module.exports = {
 
     const settings = guilds.get(member.guild.id);
 
-    // Ktos, kto juz zdal rekrutacje i wrocil na serwer, od razu dostaje role czlonka.
+    // Ktos, kto zdal rekrutacje i wychodzac z serwera nadal byl czlonkiem, od razu dostaje
+    // role z powrotem. Osoba usunieta wczesniej z klanu (bez roli czlonka) jej nie odzyska.
     const latest = recruitment.getLatestApplication(member.guild.id, member.id);
     const memberRole = settings.member_role_id ? member.guild.roles.cache.get(settings.member_role_id) : null;
-    if (latest?.status === 'accepted' && memberRole?.editable) {
+    if (
+      latest?.status === 'accepted' &&
+      memberRole?.editable &&
+      recruitment.hadMemberRoleOnExit(member.guild.id, member.id)
+    ) {
       try {
         await member.roles.add(memberRole, `Powrot czlonka (zgloszenie #${latest.id} zaakceptowane)`);
         return;

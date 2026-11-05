@@ -79,10 +79,13 @@ async function tick(client) {
 
   verification.cleanup();
 
-  await require('./ops').tick(client).catch((error) => logger.warn('Scheduler ops:', error.message));
   await require('./events').tick(client).catch((error) => logger.warn('Scheduler wydarzen:', error.message)); // wydarzenia (przypomnienia 30/5 min) + /przypomnij
   await require('./birthdays').tick(client).catch((error) => logger.warn('Scheduler urodzin:', error.message));
   await require('./clanActivity').tick(client).catch((error) => logger.warn('Scheduler aktywnosci klanu:', error.message));
+
+  // Kopie i aktualizacje (git fetch, npm ci) moga trwac minutami — nie czekamy na nie,
+  // zeby nie opozniac przypomnien. Same pilnuja, by nie uruchomic sie dwa razy naraz.
+  require('./ops').tick(client).catch((error) => logger.warn('Scheduler ops:', error.message));
 }
 
 function start(client) {

@@ -230,8 +230,23 @@ function buildClosedCard(ticket, { closedBy, reason, count, fileName }) {
   return container;
 }
 
-/** Tworzy prywatny kanal ticketu. */
+/** Tickety w trakcie tworzenia — dwa szybkie zgloszenia nie otworza dwoch kanalow. */
+const creating = new Set();
+
+/** Tworzy ticket; rownolegle wywolania dla tej samej osoby i kategorii sa odrzucane. */
 async function createTicket(interaction, category, description) {
+  const key = `${interaction.guild.id}:${interaction.user.id}:${category}`;
+  if (creating.has(key)) return { ok: false, reason: 'Twoj ticket w tej kategorii jest juz tworzony.' };
+  creating.add(key);
+  try {
+    return await openTicket(interaction, category, description);
+  } finally {
+    creating.delete(key);
+  }
+}
+
+/** Tworzy prywatny kanal ticketu. */
+async function openTicket(interaction, category, description) {
   const { guild, user } = interaction;
   if (!CATEGORIES[category]) return { ok: false, reason: 'Nieznana kategoria ticketu.' };
 

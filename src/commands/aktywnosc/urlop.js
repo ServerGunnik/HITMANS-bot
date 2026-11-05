@@ -6,7 +6,7 @@ const activityRepo = require('../../database/repositories/clanActivity');
 const leavesRepo = require('../../database/repositories/leaves');
 const inactivity = require('../../services/inactivity');
 const leaves = require('../../services/leaves');
-const { canManageRole, isAdmin } = require('../../utils/permissions');
+const { checkSelfAssignableRole, isAdmin } = require('../../utils/permissions');
 const { parseLeaveDate, DAY_MS } = require('../../utils/clanTime');
 const { reply } = require('../../ui/components');
 const { timestamp } = require('../../utils/format');
@@ -128,7 +128,7 @@ module.exports = {
     }
 
     if (role) {
-      const check = canManageRole(guild, role);
+      const check = checkSelfAssignableRole(guild, role);
       if (!check.ok) return reply.error(interaction, check.reason);
     }
 

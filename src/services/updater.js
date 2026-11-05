@@ -24,6 +24,12 @@ const RESTART_DELAY_MS = 2000;
 /** Bez AUTO_UPDATE sprawdzamy w tle rzadziej — tylko na potrzeby /status. */
 const PASSIVE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const MAX_LISTED_COMMITS = 10;
+const DEPLOY_SCRIPT = path.join('src', 'deploy-commands.js');
+
+/** Czy zmieniony plik wplywa na definicje komend slash. */
+function commandsChanged(file) {
+  return file.startsWith('src/commands/') || file === 'src/deploy-commands.js' || file === 'src/handlers/commands.js';
+}
 
 /** Domyslny runner: execFile z cwd = katalog repozytorium. */
 function defaultRunner(command, args, { timeout = GIT_TIMEOUT_MS } = {}) {
@@ -148,9 +154,34 @@ async function update() {
       installed = true;
     }
 
+    // Nowe lub zmienione komendy trzeba zarejestrowac w Discordzie (npm run deploy),
+    // inaczej po restarcie bot ma nowy kod, a Discord stare komendy.
+    let deployed = false;
+    let deployError = null;
+    if (changed.some(commandsChanged)) {
+      try {
+        await runner(process.execPath, [DEPLOY_SCRIPT], { timeout: GIT_TIMEOUT_MS });
+        deployed = true;
+      } catch (error) {
+        // Kod juz jest pobrany — nie cofamy aktualizacji, tylko zglaszamy problem.
+        deployError = shortError(error);
+        logger.warn('Rejestracja komend po aktualizacji nie powiodla sie:', deployError);
+      }
+    }
+
     Object.assign(state, { checkedAt: Date.now(), behind: 0, commits: [], error: null });
-    logger.info(`Zaktualizowano bota ${from} -> ${to}${installed ? ' (npm ci)' : ''}.`);
-    return { ok: true, updated: true, from, to, commits: checked.commits, behindCount: checked.behind, installed };
+    logger.info(`Zaktualizowano bota ${from} -> ${to}${installed ? ' (npm ci)' : ''}${deployed ? ' (deploy komend)' : ''}.`);
+    return {
+      ok: true,
+      updated: true,
+      from,
+      to,
+      commits: checked.commits,
+      behindCount: checked.behind,
+      installed,
+      deployed,
+      deployError,
+    };
   } catch (error) {
     return { ok: false, reason: shortError(error) };
   } finally {
@@ -173,6 +204,8 @@ async function notify(client, result) {
     description:
       `Wersja \`${result.from}\` → \`${result.to}\` (${result.behindCount} commit(ow)).` +
       (result.installed ? '\nZaktualizowano zaleznosci (npm ci).' : '') +
+      (result.deployed ? '\nZarejestrowano komendy slash.' : '') +
+      (result.deployError ? '\n⚠️ Rejestracja komend nie powiodla sie — potrzebne `npm run deploy`.' : '') +
       '\nBot zaraz uruchomi sie ponownie.',
   });
 

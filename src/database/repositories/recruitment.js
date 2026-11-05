@@ -372,6 +372,24 @@ function countReviews(applicationId) {
     .get(applicationId).count;
 }
 
+/** Zapamietuje, czy osoba wychodzaca z serwera miala role czlonka. */
+function recordExit(guildId, userId, hadMemberRole, now = Date.now()) {
+  getDb()
+    .prepare(
+      `INSERT INTO member_exits (guild_id, user_id, had_member_role, left_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(guild_id, user_id) DO UPDATE SET had_member_role = excluded.had_member_role, left_at = excluded.left_at`,
+    )
+    .run(guildId, userId, hadMemberRole ? 1 : 0, now);
+}
+
+/** Czy osoba miala role czlonka, gdy ostatnio opuszczala serwer. */
+function hadMemberRoleOnExit(guildId, userId) {
+  const row = getDb()
+    .prepare('SELECT had_member_role FROM member_exits WHERE guild_id = ? AND user_id = ?')
+    .get(guildId, userId);
+  return Boolean(row?.had_member_role);
+}
+
 module.exports = {
   MAX_QUESTIONS,
   AUDIENCES,
@@ -398,4 +416,6 @@ module.exports = {
   getReview,
   listReviews,
   countReviews,
+  recordExit,
+  hadMemberRoleOnExit,
 };

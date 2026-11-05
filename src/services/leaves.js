@@ -3,7 +3,7 @@
 const activityRepo = require('../database/repositories/clanActivity');
 const guilds = require('../database/repositories/guilds');
 const leavesRepo = require('../database/repositories/leaves');
-const { canManageRole } = require('../utils/permissions');
+const { checkSelfAssignableRole } = require('../utils/permissions');
 const logger = require('../utils/logger');
 const { COLORS, V2_FLAGS, panel } = require('../ui/components');
 const { plural, timestamp, truncate } = require('../utils/format');
@@ -81,7 +81,7 @@ async function startLeave(guild, member, { endsAt, reason }) {
   let roleWarning = null;
 
   if (role) {
-    const check = canManageRole(guild, role);
+    const check = checkSelfAssignableRole(guild, role);
     if (!check.ok) {
       roleWarning = check.reason;
     } else {

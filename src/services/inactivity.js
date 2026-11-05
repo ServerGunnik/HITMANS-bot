@@ -1,32 +1,15 @@
 'use strict';
 
-const { PermissionFlagsBits } = require('discord.js');
-
 const activityRepo = require('../database/repositories/clanActivity');
 const guilds = require('../database/repositories/guilds');
 const leavesRepo = require('../database/repositories/leaves');
 const roles = require('../database/repositories/roles');
-const { isAdmin } = require('../utils/permissions');
+const { isOfficer } = require('../utils/permissions');
 const { COLORS, panel } = require('../ui/components');
 const { plural, timestamp } = require('../utils/format');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DAYS = 14;
-
-/**
- * Oficer = administrator, osoba z uprawnieniem moderowania czlonkow
- * albo posiadacz najwyzszego stopnia hierarchii klanu.
- */
-function isOfficer(member) {
-  if (!member) return false;
-  if (isAdmin(member)) return true;
-  if (member.permissions?.has?.(PermissionFlagsBits.ModerateMembers)) return true;
-
-  const hierarchy = roles.list(member.guild.id);
-  if (hierarchy.length < 2) return false;
-  const top = hierarchy.reduce((best, entry) => (entry.level > best.level ? entry : best), hierarchy[0]);
-  return member.roles?.cache?.has(top.role_id) ?? false;
-}
 
 /** Czy osoba nalezy do klanu (rola czlonka albo dowolna rola z hierarchii). */
 function isClanMember(member, { memberRoleId = null, hierarchyRoleIds = [] } = {}) {

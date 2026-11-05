@@ -1,13 +1,11 @@
 'use strict';
 
-const { PermissionFlagsBits } = require('discord.js');
-
 const eventsRepo = require('../database/repositories/events');
 const remindersService = require('./reminders');
 const { COLORS, button, panel, row, V2_FLAGS } = require('../ui/components');
 const { build: customId } = require('../utils/customId');
 const { mentionList } = require('../utils/mentions');
-const { isAdmin } = require('../utils/permissions');
+const { isOfficer } = require('../utils/permissions');
 const { timestamp, truncate } = require('../utils/format');
 const logger = require('../utils/logger');
 
@@ -21,12 +19,6 @@ const RSVP_META = {
   maybe: { label: 'Moze', emoji: '❔', style: 'secondary' },
   no: { label: 'Nie bede', emoji: '❌', style: 'danger' },
 };
-
-/** Oficer = administrator albo osoba z uprawnieniem Zarzadzanie wydarzeniami. */
-function isOfficer(member) {
-  if (!member) return false;
-  return isAdmin(member) || member.permissions.has(PermissionFlagsBits.ManageEvents);
-}
 
 function messageUrl(event) {
   if (!event.message_id) return null;

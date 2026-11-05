@@ -1,11 +1,14 @@
 'use strict';
 
-const { PermissionFlagsBits } = require('discord.js');
-
 const rolePanelsRepo = require('../database/repositories/rolePanels');
 const { COLORS, V2_FLAGS, button, panel, row } = require('../ui/components');
 const { build: customId } = require('../utils/customId');
-const { canManageRole } = require('../utils/permissions');
+const {
+  DANGEROUS_PERMISSIONS,
+  canManageRole,
+  checkSelfAssignableRole: checkRoleSafety,
+  dangerousPermissionsOf,
+} = require('../utils/permissions');
 const { truncate } = require('../utils/format');
 const logger = require('../utils/logger');
 
@@ -14,50 +17,10 @@ const NAMESPACE = 'rolepanel';
 const MAX_ROLES = 20;
 const BUTTONS_PER_ROW = 5;
 
-/** Uprawnienia, ktorych nie wolno rozdawac przyciskiem. */
-const DANGEROUS_PERMISSIONS = [
-  ['Administrator', PermissionFlagsBits.Administrator],
-  ['Zarzadzanie serwerem', PermissionFlagsBits.ManageGuild],
-  ['Zarzadzanie rolami', PermissionFlagsBits.ManageRoles],
-  ['Banowanie', PermissionFlagsBits.BanMembers],
-  ['Wyrzucanie', PermissionFlagsBits.KickMembers],
-  ['Zarzadzanie kanalami', PermissionFlagsBits.ManageChannels],
-  ['Wzmianka @everyone', PermissionFlagsBits.MentionEveryone],
-];
-
 const MODE_LABELS = {
   multi: 'wielokrotny wybor',
   single: 'jedna rola z panelu',
 };
-
-/** Nazwy niebezpiecznych uprawnien, ktore ma rola. */
-function dangerousPermissionsOf(role) {
-  const permissions = role.permissions;
-  if (!permissions?.has) return [];
-  return DANGEROUS_PERMISSIONS.filter(([, flag]) => permissions.has(flag, false)).map(([name]) => name);
-}
-
-/**
- * Czy role mozna bezpiecznie rozdawac samoobslugowo:
- * bot musi nia zarzadzac, nie moze byc zarzadzana przez integracje
- * ani dawac niebezpiecznych uprawnien.
- */
-function checkRoleSafety(guild, role) {
-  if (!role) return { ok: false, reason: 'Ta rola juz nie istnieje.' };
-  if (role.managed) {
-    return { ok: false, reason: `Rola ${role} jest zarzadzana przez integracje i nie moze byc rozdawana.` };
-  }
-
-  const dangerous = dangerousPermissionsOf(role);
-  if (dangerous.length > 0) {
-    return {
-      ok: false,
-      reason: `Rola ${role} ma niebezpieczne uprawnienia (${dangerous.join(', ')}) — nie moze byc rozdawana automatycznie.`,
-    };
-  }
-
-  return canManageRole(guild, role);
-}
 
 /** Akceptuje emoji unicode albo wlasne emoji serwera (<:nazwa:id>). */
 function isValidEmoji(value) {

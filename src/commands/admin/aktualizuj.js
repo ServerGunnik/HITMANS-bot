@@ -67,7 +67,11 @@ module.exports = {
         title: '🔄 Zaktualizowano bota',
         description:
           `\`${result.from}\` → \`${result.to}\`` +
-          (result.installed ? '\nZaleznosci zaktualizowane (`npm ci --omit=dev`).' : ''),
+          (result.installed ? '\nZaleznosci zaktualizowane (`npm ci --omit=dev`).' : '') +
+          (result.deployed ? '\nKomendy slash zarejestrowane ponownie.' : '') +
+          (result.deployError
+            ? `\n⚠️ Rejestracja komend nie powiodla sie (${result.deployError}) — uruchom \`npm run deploy\` recznie.`
+            : ''),
         blocks: [renderCommits(result.commits)],
         footer: 'Restart za ok. 2 s — PM2 uruchomi bota ponownie.',
       }),
