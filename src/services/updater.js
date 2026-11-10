@@ -27,6 +27,8 @@ const RESTART_DELAY_MS = 2000;
 /** Bez AUTO_UPDATE sprawdzamy w tle rzadziej — tylko na potrzeby /status. */
 const PASSIVE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const MAX_LISTED_COMMITS = 10;
+/** Katalog z paczkami modow: lokalne zmiany w nim nie blokuja aktualizacji. */
+const MODS_PREFIX = 'data/mods/';
 const DEPLOY_SCRIPT = path.join('src', 'deploy-commands.js');
 
 /** Czy zmieniony plik wplywa na definicje komend slash. */
@@ -181,7 +183,17 @@ async function update() {
       };
     }
 
-    const dirty = await git('status', '--porcelain', '--untracked-files=no');
+    let dirty = await git('status', '--porcelain', '--untracked-files=no');
+    if (dirty) {
+      // Pliki modow (data/mods/) to tylko paczki do pobrania — reczne podmiany jarow
+      // przez menedzer plikow nie moga blokowac aktualizacji, wiec je cofamy.
+      const files = dirty.split('\n').map((line) => line.trim().replace(/^\S+\s+/, '').replace(/^"|"$/g, '')).filter(Boolean);
+      if (files.every((file) => file.startsWith(MODS_PREFIX))) {
+        logger.warn(`Cofam reczne zmiany w ${MODS_PREFIX} (${files.length} plikow), zeby pobrac aktualizacje.`);
+        await git('checkout', '--', MODS_PREFIX);
+        dirty = '';
+      }
+    }
     if (dirty) {
       return { ok: false, reason: 'W katalogu bota sa niezatwierdzone zmiany (git status) — aktualizacja wstrzymana.' };
     }

@@ -5,6 +5,6 @@
 	"emoji": "🎵",
 	"description": "Klientowy mod: tekst piosenki, która gra w Spotify (albo YouTube w przeglądarce), pojawia się słowo po słowie na niebie i w górnym pasku. Do tego HUD: teraz gra, zegar, FPS, ping, koordynaty i prędkość. Menu pod prawym Shiftem, 7 motywów kolorów. Teksty z LRCLIB, bez logowania i klucza API. Odczyt muzyki na razie tylko na Windowsie.",
 	"loader": "Fabric",
-	"latestVersion": "0.1.1",
+	"latestVersion": "0.1.2",
 	"repo": "https://github.com/ServerGunnik/Musicmod"
 }
