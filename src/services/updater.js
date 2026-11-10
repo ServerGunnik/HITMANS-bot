@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 
@@ -16,6 +17,8 @@ const logger = require('../utils/logger');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const REMOTE = 'origin';
+/** Repozytorium, z ktorego bot sie aktualizuje (mozna nadpisac w .env: GIT_REPO_URL). */
+const REPO_URL = process.env.GIT_REPO_URL || 'https://github.com/ServerGunnik/HITMANS-bot.git';
 const BRANCH = 'main';
 const UPSTREAM = `${REMOTE}/${BRANCH}`;
 const GIT_TIMEOUT_MS = 60 * 1000;
@@ -89,9 +92,40 @@ async function currentVersion() {
   return versionCache;
 }
 
+/**
+ * Gdy bot zostal wgrany bez folderu .git (np. z ZIP-a z GitHuba albo przez menedzer
+ * plikow hostingu), podpina katalog z powrotem pod repozytorium: git init, origin,
+ * fetch i ustawienie plikow na stan origin/main. Pliki spoza gita (.env, baza w data/,
+ * node_modules, backups/) nie sa ruszane, bo sa w .gitignore.
+ * Zwraca { bootstrapped, changed } — changed: pliki, ktore roznily sie od origin/main.
+ */
+async function ensureRepo() {
+  // Sprawdzamy na dysku (nie przez git), zeby repozytorium w katalogu nadrzednym nie mylilo.
+  if (fs.existsSync(path.join(REPO_ROOT, '.git'))) return { bootstrapped: false, changed: [] };
+
+  logger.warn(`Brak repozytorium git w ${REPO_ROOT} — podpinam katalog pod ${REPO_URL} (${BRANCH}).`);
+  await git('init', '--quiet');
+  try {
+    await git('remote', 'add', REMOTE, REPO_URL);
+  } catch {
+    await git('remote', 'set-url', REMOTE, REPO_URL);
+  }
+  await git('fetch', '--quiet', REMOTE, BRANCH);
+  // Indeks = stan z GitHuba, pliki na dysku zostaja; diff pokazuje, czym sie roznia.
+  await git('reset', '--quiet', '--mixed', UPSTREAM);
+  const changed = (await git('diff', '--name-only')).split('\n').map((line) => line.trim()).filter(Boolean);
+  await git('reset', '--quiet', '--hard', UPSTREAM);
+  await git('branch', '-M', BRANCH);
+  await git('branch', '--quiet', `--set-upstream-to=${UPSTREAM}`);
+  versionCache = null;
+  logger.info(`Repozytorium podpiete (${UPSTREAM}); zaktualizowanych plikow: ${changed.length}.`);
+  return { bootstrapped: true, changed };
+}
+
 /** Pobiera origin i liczy commity, o ktore jestesmy do tylu. */
 async function check() {
   try {
+    await ensureRepo();
     await git('fetch', '--quiet', REMOTE, BRANCH);
     const behind = Number.parseInt(await git('rev-list', '--count', `HEAD..${UPSTREAM}`), 10) || 0;
     const log = behind
@@ -127,6 +161,26 @@ async function update() {
   busy = true;
 
   try {
+    const repo = await ensureRepo();
+    if (repo.bootstrapped) {
+      // Pliki zostaly juz ustawione na stan z GitHuba — wystarczy restart.
+      const to = await git('rev-parse', '--short', 'HEAD');
+      Object.assign(state, { checkedAt: Date.now(), behind: 0, commits: [], error: null });
+      if (!repo.changed.length) return { ok: true, updated: false, commits: [] };
+      return {
+        ok: true,
+        updated: true,
+        from: 'zip',
+        to,
+        commits: [],
+        behindCount: repo.changed.length,
+        installed: false,
+        deployed: false,
+        deployError: null,
+        bootstrapped: true,
+      };
+    }
+
     const dirty = await git('status', '--porcelain', '--untracked-files=no');
     if (dirty) {
       return { ok: false, reason: 'W katalogu bota sa niezatwierdzone zmiany (git status) — aktualizacja wstrzymana.' };
@@ -249,9 +303,11 @@ async function tick(client, { now = Date.now() } = {}) {
 
 module.exports = {
   REPO_ROOT,
+  REPO_URL,
   UPSTREAM,
   state,
   currentVersion,
+  ensureRepo,
   check,
   update,
   scheduleRestart,
