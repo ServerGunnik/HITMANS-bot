@@ -658,3 +658,22 @@ oraz dzienną aktywność, dołączenia i wyjścia — na tej podstawie działaj
 Urlopy kończą się automatycznie (scheduler zdejmuje rolę urlopową i powiadamia kadrę). Raport tygodniowy zawiera:
 dołączenia/wyjścia, rekrutację, najaktywniejszych (wiadomości i głos), liczbę akcji moderacyjnych, ekonomię (gdy włączona)
 i liczbę nieaktywnych. Wysłany tydzień jest zapisywany w bazie, więc restart bota nie powoduje podwójnego raportu.
+
+---
+
+## Peleryny Musicmod
+
+Bot udostepnia male API HTTP dla moda **Musicmod** (`src/services/capes.js`), dzieki ktoremu
+peleryny graczy sa widoczne na kazdym serwerze Minecraft (u osob, ktore maja mod).
+
+- **Port** — na hostingu Pterodactyl bot bierze go ze zmiennej `SERVER_PORT` (przydzielony port z
+  zakladki *Network*); gdzie indziej ustaw `CAPES_PORT`. Bez portu API jest wylaczone.
+- **Peleryny wbudowane** w mod gracz ustawia sam; zapis wymaga potwierdzenia konta Minecraft
+  (mod wykonuje `joinServer`, bot pyta Mojang `hasJoined` — haslo ani token gracza do bota nie trafiaja).
+- **Wlasne obrazki** sa widoczne dla innych dopiero po akceptacji administracji. Zgloszenie trafia
+  jako karta z przyciskami *Akceptuj* / *Odrzuc* na kanal `CAPES_REVIEW_CHANNEL_ID` (albo, gdy nie
+  ustawiono, na kanal logow moderacji). Przyciski wymagaja uprawnienia *Zarzadzanie serwerem*.
+  Zaakceptowana peleryne mozna pozniej cofnac przyciskiem *Cofnij akceptacje*.
+- **Standard obrazka** sprawdzany automatycznie: PNG, proporcje 2:1, szerokosc 64-1024 px,
+  do `CAPES_MAX_KB` (domyslnie 300 KB). Zgodnosc z regulaminem ocenia administracja.
+- Stan i obrazki leza w `data/capes/` (poza gitem).
