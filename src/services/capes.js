@@ -17,7 +17,8 @@ const logger = require('../utils/logger');
  * Peleryny Musicmod widoczne na kazdym serwerze Minecraft.
  *
  * Mod (klient) rozmawia z tym serwisem po HTTP:
- *   GET  /v1/capes?uuids=a,b,c   — co nosza podani gracze
+ *   GET  /v1/capes?uuids=a,b,c&names=x,y — co nosza podani gracze (po UUID, a na
+ *        serwerach non-premium, gdzie UUID sa lokalne, po nicku; klucz odpowiedzi "@nick")
  *   GET  /v1/image/<hash>        — obrazek zatwierdzonej wlasnej peleryny (PNG)
  *   GET  /v1/me?uuid=<uuid>      — stan gracza (wybor + stan zgloszenia)
  *   POST /v1/cape                — ustawienie peleryny (wbudowanej / wlasnej / brak)
@@ -82,6 +83,21 @@ function player(uuid) {
   return players[uuid];
 }
 
+/**
+ * UUID konta premium o podanym nicku (ostatnio widzianym przy zapisie) albo null.
+ * Uzywane na serwerach non-premium, gdzie gra zna tylko nick. Gdy nick zmienil
+ * wlasciciela, wygrywa konto, ktore uzylo go ostatnio.
+ */
+function uuidByName(name) {
+  const wanted = String(name).toLowerCase();
+  let best = null;
+  for (const [uuid, entry] of Object.entries(load().players)) {
+    if ((entry.name ?? '').toLowerCase() !== wanted) continue;
+    if (!best || (entry.seenAt ?? 0) > (load().players[best].seenAt ?? 0)) best = uuid;
+  }
+  return best;
+}
+
 /** Co widza inni gracze: null (nic), { cape: 'id' } albo { cape: 'custom', hash }. */
 function visibleCape(uuid) {
   const entry = load().players[uuid];
@@ -138,6 +154,7 @@ async function authenticate(body) {
 function setCape(uuid, username, cape) {
   const entry = player(uuid);
   entry.name = username;
+  entry.seenAt = Date.now();
   entry.cape = cape;
   save();
   return status(uuid);
@@ -169,6 +186,7 @@ async function submit(uuid, username, image, preview) {
   if (hasPreview) fs.writeFileSync(previewPath(hash), preview);
 
   entry.name = username;
+  entry.seenAt = now;
   entry.custom = { state: 'pending', hash, submittedAt: now, reviewer: null };
   save();
 
@@ -335,6 +353,17 @@ async function handle(req, res) {
     for (const uuid of uuids) {
       const cape = visibleCape(uuid);
       if (cape) result[uuid] = cape;
+    }
+    // Serwery non-premium: gra zna tylko nick, wiec szukamy konta po nicku.
+    const names = (url.searchParams.get('names') ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => USERNAME.test(value))
+      .slice(0, MAX_UUIDS_PER_QUERY);
+    for (const name of names) {
+      const uuid = uuidByName(name);
+      const cape = uuid ? visibleCape(uuid) : null;
+      if (cape) result[`@${name.toLowerCase()}`] = cape;
     }
     return sendJson(res, 200, result);
   }
