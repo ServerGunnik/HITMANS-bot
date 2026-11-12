@@ -11,6 +11,7 @@ const serverLogs = require('../services/serverLogs');
 const scheduler = require('../services/scheduler');
 const voiceService = require('../services/voice');
 const security = require('../services/security');
+const capes = require('../services/capes');
 
 module.exports = {
   name: Events.ClientReady,
@@ -42,6 +43,7 @@ module.exports = {
     economyService.startVoiceRewards(client);
     shopService.startExpiryScheduler(client);
     scheduler.start(client);
+    capes.start(client);
     voiceService.cleanupOrphans(client).catch((error) => logger.warn('Sprzatanie temp voice:', error.message));
   },
 };

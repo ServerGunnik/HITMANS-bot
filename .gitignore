@@ -30,3 +30,6 @@ logs/
 
 # Kopie zapasowe bazy (/backup)
 backups/
+
+# Peleryny Musicmod (stan i obrazki graczy)
+data/capes/

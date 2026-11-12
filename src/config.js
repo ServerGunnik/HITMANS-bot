@@ -8,6 +8,12 @@ require('dotenv').config({ quiet: true });
  * *instancji bota* (token, sciezka bazy) siedzi tutaj — ustawienia
  * specyficzne dla *serwera* trzymamy w bazie danych (patrz src/database).
  */
+/** Numer portu albo null, gdy zmienna jest pusta lub bledna. */
+function parsePort(value) {
+  const port = Number.parseInt(value ?? '', 10);
+  return Number.isInteger(port) && port > 0 && port < 65536 ? port : null;
+}
+
 const config = {
   token: process.env.DISCORD_TOKEN ?? '',
   clientId: process.env.CLIENT_ID ?? '',
@@ -31,6 +37,11 @@ const config = {
   // automatyczna aktualizacja (git pull + restart przez PM2)
   autoUpdate: /^(1|true|yes|tak)$/i.test(process.env.AUTO_UPDATE ?? ''),
   autoUpdateIntervalMinutes: Number.parseInt(process.env.AUTO_UPDATE_INTERVAL_MINUTES ?? '10', 10) || 10,
+  // peleryny Musicmod: API HTTP dla moda (port z CAPES_PORT albo, na hostingu
+  // Pterodactyl, z przydzielonego SERVER_PORT; brak obu = API wylaczone)
+  capesPort: parsePort(process.env.CAPES_PORT ?? process.env.SERVER_PORT),
+  capesReviewChannelId: process.env.CAPES_REVIEW_CHANNEL_ID || null,
+  capesMaxKb: Number.parseInt(process.env.CAPES_MAX_KB ?? '300', 10) || 300,
 };
 
 /** Rzuca czytelnym bledem, gdy brakuje wymaganych zmiennych srodowiskowych. */
