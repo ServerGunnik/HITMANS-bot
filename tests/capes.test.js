@@ -76,6 +76,12 @@ describe('API peleryn Musicmod', () => {
     assert.deepEqual((await call('GET', `/v1/capes?uuids=${UUID_A}`)).body, {});
   });
 
+  it('na serwerach non-premium oddaje peleryne po nicku (bez rozrozniania wielkosci liter)', async () => {
+    await call('POST', '/v1/cape', { username: 'alice', serverId: 'c0ffee00', cape: 'moon' });
+    const seen = await call('GET', '/v1/capes?uuids=&names=ALICE,bob,zly%20nick');
+    assert.deepEqual(seen.body, { '@alice': { cape: 'moon' } });
+  });
+
   it('odrzuca zapis bez potwierdzonego konta i zla nazwe peleryny', async () => {
     const stranger = await call('POST', '/v1/cape', { username: 'mallory', serverId: 'c0ffee00', cape: 'galaxy' });
     assert.equal(stranger.status, 401);
