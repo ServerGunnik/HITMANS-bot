@@ -21,6 +21,12 @@ const REMOTE = 'origin';
 const REPO_URL = process.env.GIT_REPO_URL || 'https://github.com/ServerGunnik/HITMANS-bot.git';
 const BRANCH = 'main';
 const UPSTREAM = `${REMOTE}/${BRANCH}`;
+/**
+ * Jawny refspec: `git fetch origin main` aktualizuje origin/main tylko przy standardowej
+ * konfiguracji remote'a. Na hostingach repo bywa sklonowane z jednej galezi albo z
+ * originem bez refspec — wtedy origin/main nie powstaje i rev-list HEAD..origin/main pada.
+ */
+const FETCH_REFSPEC = `+refs/heads/${BRANCH}:refs/remotes/${UPSTREAM}`;
 const GIT_TIMEOUT_MS = 60 * 1000;
 const NPM_TIMEOUT_MS = 10 * 60 * 1000;
 const RESTART_DELAY_MS = 2000;
@@ -122,7 +128,7 @@ async function ensureRepo() {
   } catch {
     await git('remote', 'set-url', REMOTE, REPO_URL);
   }
-  await git('fetch', '--quiet', REMOTE, BRANCH);
+  await git('fetch', '--quiet', REMOTE, FETCH_REFSPEC);
   // Indeks = stan z GitHuba, pliki na dysku zostaja; diff pokazuje, czym sie roznia.
   await git('reset', '--quiet', '--mixed', UPSTREAM);
   const changed = (await git('diff', '--name-only')).split('\n').map((line) => line.trim()).filter(Boolean);
@@ -138,7 +144,7 @@ async function ensureRepo() {
 async function check() {
   try {
     await ensureRepo();
-    await git('fetch', '--quiet', REMOTE, BRANCH);
+    await git('fetch', '--quiet', REMOTE, FETCH_REFSPEC);
     const behind = Number.parseInt(await git('rev-list', '--count', `HEAD..${UPSTREAM}`), 10) || 0;
     const log = behind
       ? await git('log', `--max-count=${MAX_LISTED_COMMITS}`, '--format=%h%x09%s', `HEAD..${UPSTREAM}`)

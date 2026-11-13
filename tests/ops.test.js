@@ -121,7 +121,7 @@ describe('aktualizacja bota', () => {
       { hash: 'abc1234', subject: 'Nowa funkcja' },
       { hash: 'def5678', subject: 'Poprawka bledu' },
     ]);
-    assert.ok(runner.calls.includes('git fetch --quiet origin main'));
+    assert.ok(runner.calls.includes('git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main'));
     assert.equal(updater.state.behind, 2);
   });
 
