@@ -190,11 +190,8 @@ async function submit(uuid, username, image, preview) {
   entry.custom = { state: 'pending', hash, submittedAt: now, reviewer: null };
   save();
 
-  const posted = await postReviewCard(uuid).catch((error) => {
-    logger.warn('Peleryny: nie udalo sie wyslac karty zgloszenia:', error.message);
-    return false;
-  });
-  if (!posted) logger.warn(`Peleryny: zgloszenie ${username} czeka, ale brak kanalu dla administracji (CAPES_REVIEW_CHANNEL_ID).`);
+  const notPosted = await postReviewCard(uuid).catch((error) => `wyslanie karty nieudane (${error.message}) — sprawdz uprawnienia bota: wysylanie wiadomosci i zalacznikow`);
+  if (notPosted) logger.warn(`Peleryny: zgloszenie ${username} czeka, ale karta nie trafila do administracji: ${notPosted}.`);
   return { ok: true, custom: 'pending' };
 }
 
@@ -221,18 +218,34 @@ function review(uuid, approved, reviewer) {
 
 // ─── Discord ────────────────────────────────────────────────────────────────
 
-function reviewChannel() {
-  if (!discord) return null;
-  if (config.capesReviewChannelId) {
-    return discord.channels.cache.get(config.capesReviewChannelId) ?? null;
+/**
+ * Kanal dla administracji. Zwraca { channel } albo { problem } z opisem, czemu
+ * kanalu nie ma (zeby w konsoli bylo jasne, co poprawic).
+ */
+async function reviewChannel() {
+  if (!discord) return { problem: 'bot nie jest jeszcze polaczony z Discordem' };
+  const id = config.capesReviewChannelId;
+  if (id) {
+    let channel = discord.channels.cache.get(id) ?? null;
+    if (!channel) {
+      channel = await discord.channels.fetch(id).catch((error) => {
+        logger.debug(`Peleryny: pobranie kanalu ${id} nieudane:`, error.message);
+        return null;
+      });
+    }
+    if (!channel) {
+      return { problem: `kanal ${id} z CAPES_REVIEW_CHANNEL_ID nie istnieje albo bot go nie widzi (sprawdz uprawnienie "Wyswietlanie kanalu")` };
+    }
+    if (!channel.isTextBased?.()) return { problem: `kanal ${id} nie jest kanalem tekstowym` };
+    return { channel };
   }
   // Bez osobnego kanalu: pierwszy skonfigurowany kanal logow moderacji.
   for (const guild of discord.guilds.cache.values()) {
     const channelId = guilds.get(guild.id).modlog_channel_id;
     const channel = channelId ? guild.channels.cache.get(channelId) : null;
-    if (channel?.isTextBased?.()) return channel;
+    if (channel?.isTextBased?.()) return { channel };
   }
-  return null;
+  return { problem: 'nie ustawiono CAPES_REVIEW_CHANNEL_ID w .env (linia nie moze zaczynac sie od #) ani kanalu logow moderacji' };
 }
 
 /** Karta zgloszenia / decyzji. `entry.custom.state` decyduje o kolorze i przyciskach. */
@@ -280,10 +293,12 @@ function cardFiles(hash) {
   return [new AttachmentBuilder(preview).setName('podglad.png')];
 }
 
+/** Wysyla karte zgloszenia. Zwraca null, gdy sie udalo, albo opis problemu. */
 async function postReviewCard(uuid) {
-  const channel = reviewChannel();
   const entry = load().players[uuid];
-  if (!channel || !entry?.custom) return false;
+  if (!entry?.custom) return 'brak zgloszenia';
+  const { channel, problem } = await reviewChannel();
+  if (!channel) return problem;
   const files = cardFiles(entry.custom.hash);
   await channel.send({
     components: [buildCard(uuid, entry, { withPreview: files.length > 0 })],
@@ -291,7 +306,22 @@ async function postReviewCard(uuid) {
     flags: V2_FLAGS,
     allowedMentions: { parse: [] },
   });
-  return true;
+  entry.custom.posted = true;
+  save();
+  return null;
+}
+
+/** Po starcie: karty zgloszen, ktore wczesniej nigdzie nie trafily (np. brak kanalu). */
+async function postMissingCards() {
+  for (const [uuid, entry] of Object.entries(load().players)) {
+    if (entry.custom?.state !== 'pending' || entry.custom.posted) continue;
+    const problem = await postReviewCard(uuid).catch((error) => error.message);
+    if (problem) {
+      logger.warn(`Peleryny: zalegle zgloszenie ${entry.name || uuid} nadal czeka: ${problem}.`);
+      return;
+    }
+    logger.info(`Peleryny: wyslano zalegle zgloszenie ${entry.name || uuid} do administracji.`);
+  }
 }
 
 // ─── HTTP ───────────────────────────────────────────────────────────────────
@@ -428,6 +458,9 @@ function start(client, { port = config.capesPort } = {}) {
   });
   server.on('error', (error) => logger.warn(`Peleryny: API nie wystartowalo (${error.message}).`));
   server.listen(port, '0.0.0.0', () => logger.info(`Peleryny: API nasluchuje na porcie ${server.address().port}.`));
+  if (discord) {
+    postMissingCards().catch((error) => logger.warn('Peleryny: zalegle zgloszenia:', error.message));
+  }
   return server;
 }
 
@@ -457,6 +490,10 @@ module.exports = {
   /** Tylko dla testow. */
   _setVerifier: (fn) => {
     verifier = fn ?? verifyWithMojang;
+  },
+  _postMissingCards: async (client) => {
+    discord = client;
+    await postMissingCards();
   },
   _reset: () => {
     state = null;
