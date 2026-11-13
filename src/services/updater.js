@@ -103,10 +103,20 @@ async function currentVersion() {
  */
 async function ensureRepo() {
   // Sprawdzamy na dysku (nie przez git), zeby repozytorium w katalogu nadrzednym nie mylilo.
-  if (fs.existsSync(path.join(REPO_ROOT, '.git'))) return { bootstrapped: false, changed: [] };
-
-  logger.warn(`Brak repozytorium git w ${REPO_ROOT} — podpinam katalog pod ${REPO_URL} (${BRANCH}).`);
-  await git('init', '--quiet');
+  const hasGitDir = fs.existsSync(path.join(REPO_ROOT, '.git'));
+  if (hasGitDir) {
+    // Folder .git bywa pusty (np. po `git init` albo przerwanym podpinaniu): brak
+    // jakiejkolwiek wersji (HEAD) — wtedy tez trzeba go podpiac.
+    try {
+      await git('rev-parse', '--verify', '--quiet', 'HEAD');
+      return { bootstrapped: false, changed: [] };
+    } catch {
+      logger.warn(`Repozytorium w ${REPO_ROOT} nie ma zadnej wersji — podpinam je pod ${REPO_URL} (${BRANCH}).`);
+    }
+  } else {
+    logger.warn(`Brak repozytorium git w ${REPO_ROOT} — podpinam katalog pod ${REPO_URL} (${BRANCH}).`);
+    await git('init', '--quiet');
+  }
   try {
     await git('remote', 'add', REMOTE, REPO_URL);
   } catch {

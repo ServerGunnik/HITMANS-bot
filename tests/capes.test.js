@@ -131,6 +131,23 @@ describe('API peleryn Musicmod', () => {
     assert.equal(capes.status(UUID_A).custom, null);
   });
 
+  it('zgloszenie bez kanalu czeka i jest wysylane po starcie, gdy kanal sie pojawi', async () => {
+    await call('POST', '/v1/submit', { username: 'bob', serverId: 'c0ffee00', image: fakePng(64, 32).toString('base64') });
+    assert.equal(capes.status(UUID_B).custom, 'pending');
+    const sent = [];
+    const channel = { isTextBased: () => true, send: async (payload) => sent.push(payload) };
+    config.capesReviewChannelId = '123';
+    try {
+      await capes._postMissingCards({ channels: { cache: new Map([['123', channel]]), fetch: async () => null }, guilds: { cache: new Map() } });
+      assert.equal(sent.length, 1);
+      // Drugi raz juz nie wysyla.
+      await capes._postMissingCards({ channels: { cache: new Map([['123', channel]]), fetch: async () => null }, guilds: { cache: new Map() } });
+      assert.equal(sent.length, 1);
+    } finally {
+      config.capesReviewChannelId = null;
+    }
+  });
+
   it('karta zgloszenia ma przyciski tylko dla oczekujacych i zaakceptowanych', async () => {
     await call('POST', '/v1/submit', { username: 'bob', serverId: 'c0ffee00', image: fakePng(64, 32).toString('base64') });
     const ids = (entry) => JSON.stringify(capes.buildCard(UUID_B, entry, { withPreview: false }).toJSON());
